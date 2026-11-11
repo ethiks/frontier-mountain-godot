@@ -38,7 +38,7 @@ func _run() -> void:
 	if not _check(ProjectSettings.get_setting("display/window/stretch/aspect") == "expand", "Game uses fullscreen-friendly expand aspect"):
 		quit(1)
 		return
-	if not _check(game.get("trees").size() >= 8, "Approved trees spawned"):
+	if not _check(game.get("trees").size() >= 110, "Over 110 approved trees populate the larger forest"):
 		quit(1)
 		return
 	if not _check(game.get_node_or_null("Prop_shed") != null and game.get_node_or_null("Prop_small-shed") == null, "Exactly one toolshed prop"):
@@ -47,20 +47,41 @@ func _run() -> void:
 	if not _check(game.get_node_or_null("Prop_pile-0") == null and game.get_node_or_null("Prop_bundle-0") == null, "Loading area has no decorative log props"):
 		quit(1)
 		return
-	if not _check(game.call("_collides_at", Vector2(650, 270)), "Cabin footprint blocks player"):
+	if not _check(game.call("_collides_at", Vector2(1510, 1030)), "Cabin footprint blocks player"):
 		quit(1)
 		return
-	if not _check(game.call("_collides_at", Vector2(970, 336)), "Toolshed footprint blocks player"):
+	if not _check(game.call("_collides_at", Vector2(1830, 1096)), "Toolshed footprint blocks player"):
 		quit(1)
 		return
-	if not _check(game.call("_collides_at", Vector2(280, 626)), "Standing tree trunk blocks player"):
+	if not _check(game.call("_collides_at", Vector2(1140, 1386)), "Standing tree trunk blocks player"):
 		quit(1)
 		return
-	game.set("player_pos", Vector2(650, 500))
+	game.set("player_pos", Vector2(1510, 1260))
 	game.call("_move_with_collisions", Vector2(0, -340))
-	if not _check(game.get("player_pos").y >= 340.0, "Swept movement cannot tunnel through cabin"):
+	if not _check(game.get("player_pos").y >= 1100.0, "Swept movement cannot tunnel through cabin"):
 		quit(1)
 		return
+	if not _check(game.get_node_or_null("ForestTerrain") != null and game.get_node_or_null("PaintedCampWorld") == null, "Procedural terrain without composite background"):
+		quit(1)
+		return
+	var following_camera: Camera2D = game.get("camera")
+	if not _check(following_camera != null and following_camera.limit_right == 3072 and following_camera.limit_bottom == 2432, "Smooth camera within 96x76 world boundaries"):
+		quit(1)
+		return
+	if not _check(game.get("forest_chunks").size() >= 30 and game.get("streamed_active_chunks") > 0, "Spatial forest chunks generated and loaded"):
+		quit(1)
+		return
+	if not _check(game.get("streamed_active_chunks") < game.get("forest_chunks").size(), "Offscreen forest chunks are not instantiated"):
+		quit(1)
+		return
+	game.set("player_pos", Vector2(2840, 2060))
+	game.call("_update_camera", 0.25)
+	game.call("_update_visible_chunks", true)
+	if not _check(following_camera.position == Vector2(2840, 2060), "Camera follows lumberjack to the eastern forest"):
+		quit(1)
+		return
+	game.set("player_pos", Vector2(1207, 1323))
+	game.call("_update_visible_chunks", true)
 	var tree: Dictionary = game.get("trees")[0]
 	game.set("player_pos", tree["pos"] + Vector2(15, 8))
 	for i in range(int(tree["hp"])):
@@ -80,7 +101,7 @@ func _run() -> void:
 	if not _check(game.get("carried").size() == 1, "Log pickup enters inventory"):
 		quit(1)
 		return
-	game.set("player_pos", Vector2(802, 564))
+	game.set("player_pos", Vector2(1662, 1324))
 	game.call("_interact")
 	if not _check(game.get("carried").is_empty() and game.get("cash") > 0, "Yard unload pays species log value"):
 		quit(1)
