@@ -520,7 +520,7 @@ func _update_canopy_occlusion() -> void:
             continue
         var species: int = int(tree["type"])
         var offset: Vector2 = tree["pos"] - player_pos
-        var covers_player := int(tree["state"]) == 0 and offset.y > 0.0 and offset.y < TREE_HEIGHT[species] * 0.76 and absf(offset.x) < 81.0
+        var covers_player: bool = int(tree["state"]) == 0 and offset.y > 0.0 and offset.y < TREE_HEIGHT[species] * 0.76 and absf(offset.x) < 81.0
         sprite.modulate.a = 0.46 if covers_player else 1.0
 
 func _nearest_tree() -> Dictionary:
