@@ -55,7 +55,7 @@ func _run() -> void:
 		if frame_image != null and frame_image.get_width() >= 1280 and frame_image.get_height() >= 720:
 			var top_color := frame_image.get_pixel(10, 10)
 			var grass_color := frame_image.get_pixel(1200, 680)
-			if top_color.distance_to(grass_color) > 0.04:
+			if (absf(top_color.r - grass_color.r) + absf(top_color.g - grass_color.g) + absf(top_color.b - grass_color.b)) > 0.04:
 				DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://web/screenshots"))
 				var result := frame_image.save_png(ProjectSettings.globalize_path("res://web/screenshots/forestry.png"))
 				if result == OK:
