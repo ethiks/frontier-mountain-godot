@@ -1,3 +1,4 @@
+// Background removal verification: captures the actual deployed Godot canvas, not concept art.
 const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require("playwright-core");
