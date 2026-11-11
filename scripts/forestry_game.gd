@@ -409,6 +409,7 @@ func _process(delta: float) -> void:
     _move_player(delta)
     _update_camera(delta)
     _animate_trees(delta)
+    _update_canopy_occlusion()
     var row := 0 # Authored idle row 4 is missing its boots: use complete standing walk frame 0.
     var scale := LOGGER_IDLE_SCALE
     if swing_clock > 0.0:
@@ -507,6 +508,20 @@ func _animate_trees(delta: float) -> void:
         if elapsed > 0.9:
             tree["state"] = 2
             _say("Timber! The trunk is down. BUCK it into logs.")
+
+func _update_canopy_occlusion() -> void:
+    # In a dense forest, a nearby canopy should not conceal the lumberjack.
+    # Only the relevant approved tree sprites become temporarily translucent;
+    # no image assets or collision shapes are changed.
+    for id in _nearby_tree_ids(player_pos):
+        var tree: Dictionary = trees[id]
+        var sprite: Sprite2D = tree["sprite"]
+        if not is_instance_valid(sprite):
+            continue
+        var species: int = int(tree["type"])
+        var offset: Vector2 = tree["pos"] - player_pos
+        var covers_player := int(tree["state"]) == 0 and offset.y > 0.0 and offset.y < TREE_HEIGHT[species] * 0.76 and absf(offset.x) < 81.0
+        sprite.modulate.a = 0.46 if covers_player else 1.0
 
 func _nearest_tree() -> Dictionary:
     var selected: Dictionary = {}
