@@ -42,7 +42,7 @@ const TREE_SPAWNS := [
     Vector2(104, 696), Vector2(1052, 692)
 ]
 
-var player_pos := HOMESTEAD_ORIGIN + Vector2(347.0, 563.0)
+var player_pos := HOMESTEAD_ORIGIN + Vector2(590.0, 500.0)
 var facing := 4
 var walking_clock := 0.0
 var swing_clock := 0.0
@@ -251,6 +251,7 @@ func _setup_player() -> void:
     camera.limit_bottom = int(WORLD_SIZE.y)
     camera.position_smoothing_enabled = true
     camera.position_smoothing_speed = 5.5
+    camera.offset = Vector2(0.0, -145.0) # show cabin and trail while logger stays lower on screen
     add_child(camera)
     camera.make_current()
 
