@@ -40,7 +40,7 @@ func _run() -> void:
 	if not _check(game.get("carried").size() == 1, "Log pickup enters inventory"):
 		quit(1)
 		return
-	game.set("player_pos", Vector2(735, 465))
+	game.set("player_pos", Vector2(802, 564))
 	game.call("_interact")
 	if not _check(game.get("carried").is_empty() and game.get("cash") > 0, "Yard unload pays species log value"):
 		quit(1)
