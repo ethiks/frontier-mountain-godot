@@ -43,9 +43,11 @@ async function start(page) {
     await hold(page, "a", 960);
     await hold(page, "s", 480); // approach approved birch at the clearing edge
     await screenshot(page, "02-approach-tree.png");
+    // Spruce needs three axe swings in the approved parity rules.
     await hold(page, "Space", 110);
     await hold(page, "Space", 110);
-    await page.waitForTimeout(300);
+    await hold(page, "Space", 110);
+    await page.waitForTimeout(320);
     await screenshot(page, "03-tree-fall.png");
     await page.waitForTimeout(980);
     await hold(page, "Space", 110);
