@@ -20,13 +20,22 @@ Target: Godot 4.4 parity with the approved Frontier Mountain v0.6.2a browser gam
 Acceptance: all source audio resources load, mixer exists, fullscreen button exists, forestry smoke suite passes.
 Known caveat: fullscreen API support differs between desktop browsers and mobile Safari; test the user-gesture button.
 
-## Milestone 2: Expand from static clearing to the original forest map — NEXT
-- Reconstruct v0.6.2a tile-based world (source audit: 96 x 76 tiles) as streamed forest chunks.
-- Camera follows lumberjack at a fixed reference scale, using clear map boundaries.
-- Refine cabins, tool shed and stump collision outlines; implement a correct entrance trigger without permitting wall clipping.
-- Maintain depth sorting from ground contact, not sprite image center.
-- Add background variation as reusable terrain tiles only after their art pack is reviewed.
-Acceptance: no geometry tunneling, stable eight-way player proportions, camera smoothness and chunk loading on mobile and Web.
+## Milestone 2: Larger forest, camera and collision — DEPLOYED (2026-11-11)
+- Rebuilt the original 96 x 76 tile world bounds (3072 x 2432 world units).
+- Added a smooth Camera2D follow camera with world-edge limits and a readable starting clearing.
+- Added deterministic forest generation: 170 harvestable trees in the launch build.
+- Trees are registered by 384-unit spatial chunks; their sprites instantiate near the camera
+  and unload at a distance while the tree harvest state remains in game data.
+- Reused the five approved sprite references; no new visual packs, flattening or billboard backdrops.
+- Added procedural forest ground, grassy clearing, narrow meandering trails and a single log drop-off.
+- Kept one toolshed, separately scaled cabin, solid building/trunk/fallen timber collisions,
+  eight-direction movement, original logging SFX/music and fullscreen controls.
+- Cabin and tool-shed proximity triggers now identify their entrances but deliberately
+  do not allow wall clipping or claim that unimplemented interiors exist.
+- Nearby foreground tree canopies fade to keep the lumberjack visible.
+- Automated Godot smoke suite and live Chromium screenshots cover key movement and harvesting.
+Remaining art gate: a dedicated reusable terrain sprite atlas needs user approval before import;
+procedural ground remains temporary, as requested under the approved-art policy.
 
 ## Milestone 3: Save/load and time
 - Implement versioned save game using user://; persist player, inventory, cash, harvested trees, and world seed.
