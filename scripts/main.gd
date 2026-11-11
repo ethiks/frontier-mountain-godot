@@ -9,7 +9,7 @@ var collected = 0
 var win = false
 var paused = false
 var message = "Move to a tree and press Space / A to chop."
-var held = {}
+var joystick: Control
 var action_pending = false
 var reset_pending = false
 var pause_pending = false
@@ -27,10 +27,9 @@ func _ready():
     info.position = Vector2(24, 58)
     info.add_theme_font_size_override("font_size", 19)
     ui.add_child(info)
-    add_button(ui, "◀", Vector2(25, 585), Vector2.LEFT)
-    add_button(ui, "▶", Vector2(165, 585), Vector2.RIGHT)
-    add_button(ui, "▲", Vector2(95, 515), Vector2.UP)
-    add_button(ui, "▼", Vector2(95, 650), Vector2.DOWN)
+    joystick = preload("res://scripts/virtual_joystick.gd").new()
+    joystick.position = Vector2(24, 510)
+    ui.add_child(joystick)
     add_button(ui, "CHOP / PICK", Vector2(1030, 585), Vector2.ZERO)
     add_button(ui, "RESTART", Vector2(1030, 650), Vector2.ZERO)
     add_button(ui, "PAUSE", Vector2(1090, 15), Vector2.ZERO)
@@ -40,12 +39,10 @@ func add_button(ui, label_text, pos, direction):
     b.position = pos
     b.size = Vector2(150, 54) if direction == Vector2.ZERO else Vector2(65, 60)
     b.button_down.connect(func():
-        if direction != Vector2.ZERO: held[label_text] = direction
-        elif label_text == "CHOP / PICK": action_pending = true
+        if label_text == "CHOP / PICK": action_pending = true
         elif label_text == "RESTART": reset_pending = true
         else: pause_pending = true
     )
-    b.button_up.connect(func(): held.erase(label_text))
     ui.add_child(b)
 func reset():
     player = Vector2(640, 390)
@@ -78,11 +75,11 @@ func _process(delta):
         if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): movement.y += 1
         if Input.get_connected_joypads().size() > 0:
             movement += Vector2(Input.get_joy_axis(0, JOY_AXIS_LEFT_X), Input.get_joy_axis(0, JOY_AXIS_LEFT_Y))
-        for d in held.values(): movement += d
+        if joystick != null: movement += joystick.vector
         movement = movement.limit_length(1.0)
         if not win and movement.length() > 0.15:
             facing = movement.normalized()
-            player += facing * SPEED * delta
+            player += movement * SPEED * delta
             player.x = clampf(player.x, 25, 1255)
             player.y = clampf(player.y, 115, 685)
         for tree in trees:
