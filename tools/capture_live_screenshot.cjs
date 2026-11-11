@@ -41,6 +41,7 @@ async function start(page) {
     await start(page);
     await screenshot(page, "01-forest.png");
     await hold(page, "a", 960);
+    await hold(page, "s", 480); // approach approved birch at the clearing edge
     await screenshot(page, "02-approach-tree.png");
     await hold(page, "Space", 110);
     await hold(page, "Space", 110);
@@ -52,7 +53,7 @@ async function start(page) {
     await screenshot(page, "04-bucked-logs.png");
     await hold(page, "Space", 110);
     await screenshot(page, "05-carrying.png");
-    await hold(page, "d", 2930);
+    await hold(page, "d", 1900);
     await hold(page, "Space", 110);
     await screenshot(page, "06-loading-yard.png");
     await hold(page, "d", 3200);
