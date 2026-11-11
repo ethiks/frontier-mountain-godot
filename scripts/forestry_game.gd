@@ -109,7 +109,7 @@ func _setup_trees() -> void:
         })
 
 func _setup_player() -> void:
-    var tex := _texture("logger-eight-way")
+    var tex := load("res://assets/world/logger-eight-way-normalized.webp") as Texture2D
     if tex == null:
         push_error("Missing approved 8-way lumberjack sprite atlas")
         return
