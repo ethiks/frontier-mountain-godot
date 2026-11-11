@@ -384,6 +384,9 @@ func _on_viewport_resized() -> void:
         mixer_button.position.x = visible_size.x - 217
     if mixer_panel != null:
         mixer_panel.position.x = visible_size.x - 404
+    if terrain != null:
+        terrain.call("update_view", player_pos, visible_size)
+    _update_visible_chunks(true)
 
 func _input(event: InputEvent) -> void:
     # Unlock mobile/Web audio within a user gesture (autoplay is restricted).
@@ -496,9 +499,10 @@ func _animate_trees(delta: float) -> void:
         var elapsed: float = float(tree["fall_time"])
         var stage: int = mini(4, 1 + int(elapsed / 0.19))
         var tex := _texture("tree-%s-%d" % [TYPES[species], stage])
-        if tex != null:
+        var falling_sprite: Sprite2D = tree["sprite"]
+        if tex != null and is_instance_valid(falling_sprite):
             var size_scale: float = FALLEN_TRUNK_WIDTH[species] / float(tex.get_width())
-            _anchor_at_ground(tree["sprite"], tree["pos"], tex, size_scale)
+            _anchor_at_ground(falling_sprite, tree["pos"], tex, size_scale)
         if elapsed > 0.9:
             tree["state"] = 2
             _say("Timber! The trunk is down. BUCK it into logs.")
@@ -536,6 +540,12 @@ func _interact() -> void:
         audio_engine.play_fx("log-drop", 0.7)
         carried.clear()
         _say("Delivered %d full-size logs. Earned $%d." % [total, income])
+        return
+    if player_pos.distance_to(CABIN_ENTRY) < 68.0:
+        _say("CABIN ENTRANCE: rest and save will unlock in the next milestone.")
+        return
+    if player_pos.distance_to(SHED_ENTRY) < 67.0:
+        _say("TOOL SHED: equipment access will unlock in the next milestone.")
         return
     var index := _nearest_log_index()
     if index >= 0 and carried.size() < LOG_CAPACITY:
@@ -613,10 +623,16 @@ func _update_hud() -> void:
     hud.text = "FRONTIER MOUNTAIN   |   $%d   |   LOGS %d/%d   |   TREES %d" % [cash, carried.size(), LOG_CAPACITY, _standing_count()]
     if message.text != message_text:
         message.text = message_text
+    if navigation_label != null:
+        navigation_label.text = "WILDERNESS 96 x 76  |  HOME %d tiles  |  CHUNKS %d" % [int(player_pos.distance_to(YARD_POSITION) / 32.0), streamed_active_chunks]
     if sound_button != null:
         sound_button.text = "SOUND ON" if audio_engine.enabled and audio_engine.unlocked else ("SOUND OFF" if not audio_engine.enabled else "SOUND")
     if player_pos.distance_to(YARD_POSITION) < 110.0 and not carried.is_empty():
         action_button.text = "SELL LOGS"
+    elif player_pos.distance_to(CABIN_ENTRY) < 68.0:
+        action_button.text = "CABIN"
+    elif player_pos.distance_to(SHED_ENTRY) < 67.0:
+        action_button.text = "TOOL SHED"
     elif _nearest_log_index() >= 0:
         action_button.text = "PICK UP" if carried.size() < LOG_CAPACITY else "FULL LOAD"
     else:
@@ -641,20 +657,10 @@ func _say(words: String) -> void:
     message_text = words
 
 func _draw() -> void:
-    # Simple game ground instead of a misleading painted scene containing
-    # non-interactive trees, duplicate characters, buildings and lumber.
-    draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), Color("#537c5b"))
-    for x in range(18, 1280, 72):
-        for y in range(130, 720, 66):
-            var jitter := Vector2(float((x * 7 + y * 11) % 29), float((x * 11 + y * 3) % 27))
-            draw_circle(Vector2(x, y) + jitter, 2.4, Color("#719266"))
-            draw_circle(Vector2(x + 36, y + 24), 1.8, Color("#406c4f"))
-    # An untextured compacted-earth loading pad, not a fake aerial screenshot.
-    draw_circle(YARD_POSITION + Vector2(0, -13), 117.0, Color("#8e845d"))
-    draw_circle(YARD_POSITION + Vector2(0, -13), 106.0, Color("#aa976d"))
-    draw_string(ThemeDB.fallback_font, YARD_POSITION + Vector2(-75, -108), "LOG DROP-OFF", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("#f8e8b5"))
+    # Environment ground and paths come from the streamed terrain node.
     draw_circle(player_pos + Vector2(0.0, 3.0), 9.0, Color(0.06, 0.11, 0.07, 0.35))
-    for tree in trees:
+    for tree_id in _nearby_tree_ids(player_pos):
+        var tree: Dictionary = trees[tree_id]
         if int(tree["state"]) == 0 and int(tree["hp"]) < int(tree["max_hp"]):
             var p: Vector2 = tree["pos"]
             var ratio := float(tree["hp"]) / float(tree["max_hp"])
