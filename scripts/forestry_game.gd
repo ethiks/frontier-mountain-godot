@@ -56,6 +56,13 @@ var instructions: Label
 var message: Label
 var action_button: Button
 var world_time := 0.0
+var audio_engine: Node
+var mixer_panel: Panel
+var music_slider: HSlider
+var effects_slider: HSlider
+var sound_button: Button
+var fullscreen_button: Button
+var top_panel: ColorRect
 var message_text := "Chop a tree, buck the trunk, collect logs, then take them to the signed loading bay."
 
 func _texture(name: String) -> Texture2D:
@@ -64,11 +71,16 @@ func _texture(name: String) -> Texture2D:
     return texture_cache[name]
 
 func _ready() -> void:
+    audio_engine = preload("res://scripts/legacy_audio.gd").new()
+    audio_engine.name = "LegacyAudio"
+    add_child(audio_engine)
     _setup_background()
     _setup_trees()
     _setup_player()
     _setup_ui()
     _update_hud()
+    get_viewport().size_changed.connect(_on_viewport_resized)
+    _on_viewport_resized()
 
 func _setup_background() -> void:
     # No composite backdrop and no decorative log piles: only a cabin and a single toolshed.
@@ -159,7 +171,7 @@ func _label(parent: Node, txt: String, pos: Vector2, fontsize: int, color: Color
 func _setup_ui() -> void:
     var layer := CanvasLayer.new()
     add_child(layer)
-    var top_panel := ColorRect.new()
+    top_panel = ColorRect.new()
     top_panel.color = Color(0.05, 0.10, 0.08, 0.82)
     top_panel.size = Vector2(1280, 116)
     top_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -177,6 +189,106 @@ func _setup_ui() -> void:
     action_button.add_theme_font_size_override("font_size", 21)
     action_button.pressed.connect(_interact)
     layer.add_child(action_button)
+    sound_button = Button.new()
+    sound_button.text = "SOUND"
+    sound_button.position = Vector2(950, 20)
+    sound_button.size = Vector2(103, 51)
+    sound_button.add_theme_font_size_override("font_size", 15)
+    sound_button.pressed.connect(_toggle_audio)
+    layer.add_child(sound_button)
+    var mix_button := Button.new()
+    mix_button.text = "MIX"
+    mix_button.position = Vector2(1063, 20)
+    mix_button.size = Vector2(75, 51)
+    mix_button.add_theme_font_size_override("font_size", 15)
+    mix_button.pressed.connect(_toggle_mixer)
+    layer.add_child(mix_button)
+    fullscreen_button = Button.new()
+    fullscreen_button.text = "FULLSCREEN"
+    fullscreen_button.position = Vector2(1148, 20)
+    fullscreen_button.size = Vector2(114, 51)
+    fullscreen_button.add_theme_font_size_override("font_size", 13)
+    fullscreen_button.pressed.connect(_toggle_fullscreen)
+    layer.add_child(fullscreen_button)
+    mixer_panel = Panel.new()
+    mixer_panel.position = Vector2(878, 117)
+    mixer_panel.size = Vector2(378, 222)
+    mixer_panel.visible = false
+    layer.add_child(mixer_panel)
+    _label(mixer_panel, "AUDIO / FRONTIER MOUNTAIN", Vector2(17, 13), 16, Color("#e8d4a6"))
+    _label(mixer_panel, "Music", Vector2(18, 50), 15, Color.WHITE)
+    music_slider = HSlider.new()
+    music_slider.position = Vector2(120, 50)
+    music_slider.size = Vector2(240, 29)
+    music_slider.min_value = 0.0
+    music_slider.max_value = 1.0
+    music_slider.step = 0.05
+    music_slider.value = audio_engine.music_level
+    music_slider.value_changed.connect(func(value: float): audio_engine.set_music_level(value))
+    mixer_panel.add_child(music_slider)
+    _label(mixer_panel, "Logging SFX", Vector2(18, 102), 15, Color.WHITE)
+    effects_slider = HSlider.new()
+    effects_slider.position = Vector2(120, 102)
+    effects_slider.size = Vector2(240, 29)
+    effects_slider.min_value = 0.0
+    effects_slider.max_value = 1.0
+    effects_slider.step = 0.05
+    effects_slider.value = audio_engine.sfx_level
+    effects_slider.value_changed.connect(func(value: float): audio_engine.set_sfx_level(value))
+    mixer_panel.add_child(effects_slider)
+    var test_button := Button.new()
+    test_button.text = "TEST CHOP SOUND"
+    test_button.position = Vector2(16, 155)
+    test_button.size = Vector2(345, 49)
+    test_button.pressed.connect(func(): audio_engine.play_fx("axe-chop"))
+    mixer_panel.add_child(test_button)
+
+func _toggle_audio() -> void:
+    audio_engine.toggle_enabled()
+    _update_hud()
+
+func _toggle_mixer() -> void:
+    mixer_panel.visible = not mixer_panel.visible
+    if mixer_panel.visible:
+        audio_engine.begin_audio()
+
+func _toggle_fullscreen() -> void:
+    # Browser fullscreen requires a real click/button press, not a frame tick.
+    if OS.has_feature("web"):
+        JavaScriptBridge.eval("(function(){var c=document.getElementById('canvas')||document.querySelector('canvas');if(document.fullscreenElement){document.exitFullscreen();}else if(c&&c.requestFullscreen){c.requestFullscreen().catch(function(e){console.warn('Fullscreen blocked',e);});}})()")
+    else:
+        var current := DisplayServer.window_get_mode()
+        DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if current == DisplayServer.WINDOW_MODE_FULLSCREEN else DisplayServer.WINDOW_MODE_FULLSCREEN)
+
+func _on_viewport_resized() -> void:
+    var visible_size := get_viewport_rect().size
+    if top_panel != null:
+        top_panel.size.x = visible_size.x
+    if joystick != null:
+        joystick.position = Vector2(24, visible_size.y - 204)
+    if action_button != null:
+        action_button.position = Vector2(visible_size.x - 218, visible_size.y - 144)
+    if fullscreen_button != null:
+        fullscreen_button.position.x = visible_size.x - 132
+    if sound_button != null:
+        sound_button.position.x = visible_size.x - 330
+    if mixer_panel != null:
+        mixer_panel.position.x = visible_size.x - 404
+
+func _input(event: InputEvent) -> void:
+    # Unlock mobile/Web audio within a user gesture (autoplay is restricted).
+    if audio_engine == null:
+        return
+    if event is InputEventKey and event.pressed and not event.echo:
+        audio_engine.begin_audio()
+    elif event is InputEventScreenTouch and event.pressed:
+        audio_engine.begin_audio()
+    elif event is InputEventMouseButton and event.pressed:
+        audio_engine.begin_audio()
+    elif event is InputEventJoypadButton and event.pressed:
+        audio_engine.begin_audio()
+        if event.button_index == JOY_BUTTON_START:
+            _toggle_fullscreen()
 
 func _process(delta: float) -> void:
     world_time += delta
@@ -307,6 +419,7 @@ func _interact() -> void:
             income += VALUES[species]
         var total := carried.size()
         cash += income
+        audio_engine.play_fx("log-drop", 0.7)
         carried.clear()
         _say("Delivered %d full-size logs. Earned $%d." % [total, income])
         return
@@ -316,6 +429,7 @@ func _interact() -> void:
         var sprite: Sprite2D = item["sprite"]
         sprite.queue_free()
         carried.append(int(item["type"]))
+        audio_engine.play_fx("log-lift", 0.72)
         ground_logs.remove_at(index)
         _say("Carrying %s timber (%d/%d)." % [TYPES[carried.back()], carried.size(), LOG_CAPACITY])
         return
@@ -337,11 +451,13 @@ func _interact() -> void:
     if direction.length() > 2.0:
         facing = posmod(int(round((atan2(direction.y, direction.x) + PI / 2.0) / (PI / 4.0))), 8)
     tree["hp"] = int(tree["hp"]) - 1
+    audio_engine.play_fx("axe-chop", 0.95)
     swing_kind = "chop"
     swing_clock = 0.33
     if int(tree["hp"]) <= 0:
         tree["state"] = 1
         tree["fall_time"] = 0.0
+        audio_engine.play_fx("tree-fall", 0.92)
         _say("TIMBER! %s is falling." % TYPES[species].capitalize())
     else:
         _say("%s: %d more chops." % [TYPES[species].capitalize(), int(tree["hp"])])
@@ -356,6 +472,7 @@ func _buck_tree(tree: Dictionary) -> void:
     for i in range(YIELDS[species]):
         var separation := (float(i) - float(YIELDS[species] - 1) * 0.5) * 78.0
         _spawn_log(tree["pos"] + Vector2(separation, 19.0 + float(i % 2) * 14.0), species)
+    audio_engine.play_fx("wood-buck", 0.68)
     swing_kind = "buck"
     swing_clock = 0.38
     _say("Bucked %s into %d scaled logs." % [TYPES[species], YIELDS[species]])
@@ -381,6 +498,8 @@ func _update_hud() -> void:
     hud.text = "FRONTIER MOUNTAIN   |   $%d   |   LOGS %d/%d   |   TREES %d" % [cash, carried.size(), LOG_CAPACITY, _standing_count()]
     if message.text != message_text:
         message.text = message_text
+    if sound_button != null:
+        sound_button.text = "SOUND ON" if audio_engine.enabled and audio_engine.unlocked else ("SOUND OFF" if not audio_engine.enabled else "SOUND")
     if player_pos.distance_to(YARD_POSITION) < 110.0 and not carried.is_empty():
         action_button.text = "SELL LOGS"
     elif _nearest_log_index() >= 0:
@@ -409,7 +528,7 @@ func _say(words: String) -> void:
 func _draw() -> void:
     # Simple game ground instead of a misleading painted scene containing
     # non-interactive trees, duplicate characters, buildings and lumber.
-    draw_rect(Rect2(0, 0, 1280, 720), Color("#537c5b"))
+    draw_rect(Rect2(Vector2.ZERO, get_viewport_rect().size), Color("#537c5b"))
     for x in range(18, 1280, 72):
         for y in range(130, 720, 66):
             var jitter := Vector2(float((x * 7 + y * 11) % 29), float((x * 11 + y * 3) % 27))
