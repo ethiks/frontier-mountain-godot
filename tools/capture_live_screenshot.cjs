@@ -1,4 +1,4 @@
-// Background removal verification: captures the actual deployed Godot canvas, not concept art.
+// Collision + de-artifacting review: real Godot Web screenshots after the 2026-11-11 cleanup.
 const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require("playwright-core");
