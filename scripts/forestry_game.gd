@@ -8,6 +8,9 @@ const PLAYER_SPEED := 225.0
 const INTERACT_RADIUS := 98.0
 const LOG_CAPACITY := 4
 const PLAYER_COLLISION_RADIUS := 13.0
+# Subrectangles select ONLY the one complete log per approved source crop.
+# The original wider files contain neighboring atlas fragments above and to the right.
+const LOG_CROP_RECTS := [Rect2(4, 18, 85, 40), Rect2(0, 17, 75, 37), Rect2(0, 20, 76, 36), Rect2(0, 15, 71, 35)]
 const CABIN_BLOCKER := Rect2(497.0, 222.0, 309.0, 106.0)
 const SHED_BLOCKER := Rect2(887.0, 298.0, 170.0, 69.0)
 const YARD_POSITION := Vector2(802, 564)
@@ -347,7 +350,7 @@ func _buck_tree(tree: Dictionary) -> void:
     var species: int = int(tree["type"])
     tree["state"] = 3
     # The approved tree-%s-5 crop contains neighboring atlas fragments.
-    # Hide the old tree entirely; display only cleaned loose-log sprites.
+    # Hide the old tree entirely; render only sub-cropped clean approved log sprites.
     var standing_sprite: Sprite2D = tree["sprite"]
     standing_sprite.visible = false
     for i in range(YIELDS[species]):
@@ -358,12 +361,14 @@ func _buck_tree(tree: Dictionary) -> void:
     _say("Bucked %s into %d scaled logs." % [TYPES[species], YIELDS[species]])
 
 func _spawn_log(pos: Vector2, species: int) -> void:
-    var tex := load("res://assets/world/clean_logs/loose-%d.webp" % species) as Texture2D
+    var tex := _texture("loose-%d" % species)
     var sprite := Sprite2D.new()
     sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     sprite.texture = tex
     if tex != null:
-        sprite.scale = Vector2.ONE * (LOOSE_LOG_WIDTH / float(tex.get_width()))
+        sprite.region_enabled = true
+        sprite.region_rect = LOG_CROP_RECTS[species]
+        sprite.scale = Vector2.ONE * (LOOSE_LOG_WIDTH / LOG_CROP_RECTS[species].size.x)
     sprite.position = pos
     sprite.z_index = int(pos.y / 10.0)
     add_child(sprite)
