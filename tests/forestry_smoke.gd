@@ -18,37 +18,37 @@ func _run() -> void:
 	var game: Node = packed.instantiate()
 	root.add_child(game)
 	await process_frame
-	if not _check(game.trees.size() >= 8, "Approved trees spawned"):
+	if not _check(game.get("trees").size() >= 8, "Approved trees spawned"):
 		quit(1)
 		return
-	var tree: Dictionary = game.trees[0]
-	game.player_pos = tree["pos"] + Vector2(15, 8)
+	var tree: Dictionary = game.get("trees")[0]
+	game.set("player_pos", tree["pos"] + Vector2(15, 8))
 	for i in range(int(tree["hp"])):
-		game._interact()
+		game.call("_interact")
 	if not _check(int(tree["state"]) == 1, "Chopping triggers falling"):
 		quit(1)
 		return
-	game._animate_trees(1.0)
+	game.call("_animate_trees", 1.0)
 	if not _check(int(tree["state"]) == 2, "Falling animation completes"):
 		quit(1)
 		return
-	game._interact()
-	if not _check(int(tree["state"]) == 3 and game.ground_logs.size() >= 2, "Bucking creates approved logs"):
+	game.call("_interact")
+	if not _check(int(tree["state"]) == 3 and game.get("ground_logs").size() >= 2, "Bucking creates approved logs"):
 		quit(1)
 		return
-	game._interact()
-	if not _check(game.carried.size() == 1, "Log pickup enters inventory"):
+	game.call("_interact")
+	if not _check(game.get("carried").size() == 1, "Log pickup enters inventory"):
 		quit(1)
 		return
-	game.player_pos = game.YARD_POSITION
-	game._interact()
-	if not _check(game.carried.is_empty() and game.cash > 0, "Yard unload pays species log value"):
+	game.set("player_pos", Vector2(735, 465))
+	game.call("_interact")
+	if not _check(game.get("carried").is_empty() and game.get("cash") > 0, "Yard unload pays species log value"):
 		quit(1)
 		return
 	# A headless render may have no drawable framebuffer; publish only a real,
 	# non-flat image captured from the game viewport.
 	await process_frame
-	await RenderingServer.frame_post_draw
+	
 	var texture: ViewportTexture = root.get_texture()
 	if texture != null:
 		var frame_image: Image = texture.get_image()
@@ -56,8 +56,8 @@ func _run() -> void:
 			var top_color := frame_image.get_pixel(10, 10)
 			var grass_color := frame_image.get_pixel(1200, 680)
 			if top_color.distance_to(grass_color) > 0.04:
-				DirAccess.make_dir_recursive_absolute("res://web/screenshots")
-				var result := frame_image.save_png("res://web/screenshots/forestry.png")
+				DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://web/screenshots"))
+				var result := frame_image.save_png(ProjectSettings.globalize_path("res://web/screenshots/forestry.png"))
 				if result == OK:
 					print("SCREENSHOT: web/screenshots/forestry.png from Godot viewport")
 			else:
