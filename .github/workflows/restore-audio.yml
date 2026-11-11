@@ -13,6 +13,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: Install audio transcoder
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Convert original audio to Godot-supported Ogg Vorbis
         run: |
           set -euo pipefail
