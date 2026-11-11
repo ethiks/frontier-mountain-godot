@@ -2,6 +2,11 @@ extends Node2D
 ## Frontier Mountain — normalized independent sprites and simple procedural terrain.
 ## No composite or pre-rendered background: the lumberjack, trees, buildings, and loading props are independent.
 const ART := "res://assets/approved_sprites/crops/"
+const WORLD_SIZE := Vector2(3072.0, 2432.0) # 96 x 76 tiles
+const CHUNK_SIZE := 384.0
+const HOMESTEAD_ORIGIN := Vector2(860.0, 760.0)
+const CABIN_ENTRY := HOMESTEAD_ORIGIN + Vector2(707.0, 352.0)
+const SHED_ENTRY := HOMESTEAD_ORIGIN + Vector2(962.0, 392.0)
 const FRAME_W := 84
 const FRAME_H := 92
 const PLAYER_SPEED := 225.0
@@ -13,7 +18,7 @@ const PLAYER_COLLISION_RADIUS := 13.0
 const LOG_CROP_RECTS := [Rect2(4, 18, 85, 40), Rect2(0, 17, 75, 37), Rect2(0, 20, 76, 36), Rect2(0, 15, 71, 35)]
 const CABIN_BLOCKER := Rect2(497.0, 222.0, 309.0, 106.0)
 const SHED_BLOCKER := Rect2(887.0, 298.0, 170.0, 69.0)
-const YARD_POSITION := Vector2(802, 564)
+const YARD_POSITION := HOMESTEAD_ORIGIN + Vector2(802.0, 564.0)
 const TYPES := ["pine", "spruce", "birch", "oak"]
 const HEALTH := [2, 3, 2, 4]
 const VALUES := [8, 10, 12, 14]
@@ -37,7 +42,7 @@ const TREE_SPAWNS := [
     Vector2(104, 696), Vector2(1052, 692)
 ]
 
-var player_pos := Vector2(347, 563)
+var player_pos := HOMESTEAD_ORIGIN + Vector2(347.0, 563.0)
 var facing := 4
 var walking_clock := 0.0
 var swing_clock := 0.0
@@ -49,6 +54,14 @@ var carried: Array[int] = []
 var trees: Array[Dictionary] = []
 var ground_logs: Array[Dictionary] = []
 var texture_cache: Dictionary = {}
+var forest_chunks: Dictionary = {} # Vector2i -> Array of tree IDs
+var active_chunks: Dictionary = {}
+var streamed_active_chunks := 0
+var chunk_refresh_timer := 0.0
+var last_streamed_pos := Vector2(-99999.0, -99999.0)
+var camera: Camera2D
+var terrain: Node2D
+var navigation_label: Label
 var logger: Sprite2D
 var joystick: Control
 var hud: Label
@@ -79,14 +92,20 @@ func _ready() -> void:
     _setup_trees()
     _setup_player()
     _setup_ui()
+    _update_visible_chunks(true)
     _update_hud()
     get_viewport().size_changed.connect(_on_viewport_resized)
     _on_viewport_resized()
 
 func _setup_background() -> void:
-    # No composite backdrop and no decorative log piles: only a cabin and a single toolshed.
-    _place_prop("cabin-day", Vector2(650.0, 326.0), 340.0, 1)
-    _place_prop("shed", Vector2(968.0, 365.0), 206.0, 1)
+    # Dynamic terrain, not a fixed illustration or an unapproved sprite pack.
+    terrain = preload("res://scripts/forest_terrain.gd").new()
+    terrain.name = "ForestTerrain"
+    terrain.z_index = -100
+    add_child(terrain)
+    # Preserve the existing independently sized cabin and single tool shed.
+    _place_prop("cabin-day", HOMESTEAD_ORIGIN + Vector2(650.0, 326.0), 340.0, 1)
+    _place_prop("shed", HOMESTEAD_ORIGIN + Vector2(968.0, 365.0), 206.0, 1)
 
 func _place_prop(name: String, foot: Vector2, width: float, depth: int) -> void:
     var tex: Texture2D = _texture(name)
@@ -147,6 +166,17 @@ func _setup_player() -> void:
     logger.z_index = int(player_pos.y / 10.0)
     add_child(logger)
     _set_player_pose(0, LOGGER_IDLE_SCALE)
+    camera = Camera2D.new()
+    camera.name = "FollowCamera"
+    camera.position = player_pos
+    camera.limit_left = 0
+    camera.limit_top = 0
+    camera.limit_right = int(WORLD_SIZE.x)
+    camera.limit_bottom = int(WORLD_SIZE.y)
+    camera.position_smoothing_enabled = true
+    camera.position_smoothing_speed = 5.5
+    add_child(camera)
+    camera.make_current()
 
 func _set_player_pose(row: int, scale: float) -> void:
     if logger == null:
@@ -180,6 +210,7 @@ func _setup_ui() -> void:
     hud = _label(layer, "FRONTIER MOUNTAIN", Vector2(24, 12), 25, Color("#f8e5b1"))
     instructions = _label(layer, "Walk: joystick / WASD / controller    Act: E / SPACE / controller A", Vector2(26, 49), 15, Color("#e9e8ce"))
     message = _label(layer, message_text, Vector2(26, 77), 17, Color("#ffdc96"))
+    navigation_label = _label(layer, "FOREST / HOME", Vector2(26, 123), 15, Color("#efe0ba"))
     joystick = preload("res://scripts/virtual_joystick.gd").new()
     joystick.position = Vector2(24, 516)
     layer.add_child(joystick)
