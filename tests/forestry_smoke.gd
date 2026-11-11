@@ -21,6 +21,26 @@ func _run() -> void:
 	if not _check(game.get("trees").size() >= 8, "Approved trees spawned"):
 		quit(1)
 		return
+	if not _check(game.get_node_or_null("Prop_shed") != null and game.get_node_or_null("Prop_small-shed") == null, "Exactly one toolshed prop"):
+		quit(1)
+		return
+	if not _check(game.get_node_or_null("Prop_pile-0") == null and game.get_node_or_null("Prop_bundle-0") == null, "Loading area has no decorative log props"):
+		quit(1)
+		return
+	if not _check(game.call("_collides_at", Vector2(650, 270)), "Cabin footprint blocks player"):
+		quit(1)
+		return
+	if not _check(game.call("_collides_at", Vector2(970, 336)), "Toolshed footprint blocks player"):
+		quit(1)
+		return
+	if not _check(game.call("_collides_at", Vector2(280, 626)), "Standing tree trunk blocks player"):
+		quit(1)
+		return
+	game.set("player_pos", Vector2(650, 500))
+	game.call("_move_with_collisions", Vector2(0, -340))
+	if not _check(game.get("player_pos").y >= 340.0, "Swept movement cannot tunnel through cabin"):
+		quit(1)
+		return
 	var tree: Dictionary = game.get("trees")[0]
 	game.set("player_pos", tree["pos"] + Vector2(15, 8))
 	for i in range(int(tree["hp"])):
