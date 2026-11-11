@@ -133,23 +133,99 @@ func _anchor_at_ground(sprite: Sprite2D, pos: Vector2, tex: Texture2D, scale: fl
     sprite.position = pos - Vector2(0.0, float(tex.get_height()) * scale * 0.5)
 
 func _setup_trees() -> void:
+    # Preserve the original clearing layout relative to the lumberjack.
     for i in range(TREE_SPAWNS.size()):
-        var species: int = i % TYPES.size()
-        var tex := _texture("tree-%s-0" % TYPES[species])
-        if tex == null:
-            push_error("Missing approved tree texture: " + TYPES[species])
-            continue
-        var sprite := Sprite2D.new()
-        sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-        sprite.z_index = int(TREE_SPAWNS[i].y / 10.0)
-        add_child(sprite)
-        _anchor_at_ground(sprite, TREE_SPAWNS[i], tex, _tree_scale(species))
-        trees.append({
-            "pos": TREE_SPAWNS[i], "type": species,
-            "hp": HEALTH[species], "max_hp": HEALTH[species],
-            "state": 0, # standing -> falling -> down -> bucked
-            "fall_time": 0.0, "sprite": sprite
-        })
+        _register_tree(TREE_SPAWNS[i] + HOMESTEAD_ORIGIN, i % TYPES.size())
+    # Deterministic forest across the remainder of the original 96x76 map.
+    var generated: Array[Dictionary] = terrain.call("generate_forest_positions")
+    for entry in generated:
+        _register_tree(entry["pos"], int(entry["type"]))
+
+func _register_tree(pos: Vector2, species: int) -> void:
+    var tree: Dictionary = {
+        "pos": pos, "type": species, "hp": HEALTH[species],
+        "max_hp": HEALTH[species], "state": 0, "fall_time": 0.0, "sprite": null
+    }
+    var id := trees.size()
+    trees.append(tree)
+    var key := _chunk_key(pos)
+    if not forest_chunks.has(key):
+        forest_chunks[key] = []
+    forest_chunks[key].append(id)
+
+func _chunk_key(pos: Vector2) -> Vector2i:
+    return Vector2i(int(floor(pos.x / CHUNK_SIZE)), int(floor(pos.y / CHUNK_SIZE)))
+
+func _nearby_tree_ids(pos: Vector2) -> Array[int]:
+    var result: Array[int] = []
+    var cell := _chunk_key(pos)
+    for dx in range(-1, 2):
+        for dy in range(-1, 2):
+            var candidate := cell + Vector2i(dx, dy)
+            if forest_chunks.has(candidate):
+                for i in forest_chunks[candidate]:
+                    result.append(int(i))
+    return result
+
+func _ensure_tree_sprite(tree: Dictionary) -> void:
+    if int(tree["state"]) == 3 or is_instance_valid(tree["sprite"]):
+        return
+    var species: int = int(tree["type"])
+    var state: int = int(tree["state"])
+    var stage := 0
+    if state == 1:
+        stage = mini(4, 1 + int(float(tree["fall_time"]) / 0.19))
+    elif state == 2:
+        stage = 4
+    var tex := _texture("tree-%s-%d" % [TYPES[species], stage])
+    if tex == null:
+        return
+    var sprite := Sprite2D.new()
+    sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    sprite.z_index = int(tree["pos"].y / 10.0)
+    add_child(sprite)
+    var scale: float = _tree_scale(species) if state == 0 else FALLEN_TRUNK_WIDTH[species] / float(tex.get_width())
+    _anchor_at_ground(sprite, tree["pos"], tex, scale)
+    tree["sprite"] = sprite
+
+func _update_visible_chunks(force: bool = false) -> void:
+    if camera == null:
+        return
+    # Only materialize tree sprites for the visible region plus one chunk.
+    # All harvested state stays in data, even when the chunk is unloaded.
+    var extent := get_viewport_rect().size * 0.5 + Vector2(CHUNK_SIZE, CHUNK_SIZE)
+    var visible := Rect2(player_pos - extent, extent * 2.0)
+    var active := 0
+    for cell in forest_chunks.keys():
+        var chunk_rect := Rect2(Vector2(cell) * CHUNK_SIZE, Vector2(CHUNK_SIZE, CHUNK_SIZE))
+        var should_load := chunk_rect.intersects(visible)
+        var was_loaded := bool(active_chunks.get(cell, false))
+        if force or was_loaded != should_load:
+            for id in forest_chunks[cell]:
+                var tree: Dictionary = trees[int(id)]
+                if should_load:
+                    _ensure_tree_sprite(tree)
+                else:
+                    var sprite: Sprite2D = tree["sprite"]
+                    if is_instance_valid(sprite):
+                        sprite.queue_free()
+                    tree["sprite"] = null
+            active_chunks[cell] = should_load
+        if should_load:
+            active += 1
+    streamed_active_chunks = active
+    last_streamed_pos = player_pos
+
+func _update_camera(delta: float) -> void:
+    if camera == null:
+        return
+    camera.position = player_pos
+    chunk_refresh_timer += delta
+    if chunk_refresh_timer > 0.2 and player_pos.distance_to(last_streamed_pos) > 32.0:
+        chunk_refresh_timer = 0.0
+        _update_visible_chunks()
+    if terrain != null:
+        terrain.call("update_view", player_pos, get_viewport_rect().size)
 
 func _setup_player() -> void:
     var tex := load("res://assets/world/logger-eight-way-normalized.webp") as Texture2D
