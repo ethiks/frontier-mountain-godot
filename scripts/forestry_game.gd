@@ -1,6 +1,6 @@
 extends Node2D
-## Frontier Mountain — normalized sprite scale and approved camp environment.
-## Keep gameplay actor separate from the painted environment; only actual harvested trees and logs move.
+## Frontier Mountain — normalized independent sprites and simple procedural terrain.
+## No composite or pre-rendered background: the lumberjack, trees, buildings, and loading props are independent.
 const ART := "res://assets/approved_sprites/crops/"
 const FRAME_W := 84
 const FRAME_H := 92
@@ -65,19 +65,28 @@ func _ready() -> void:
     _update_hud()
 
 func _setup_background() -> void:
-    var tex := load("res://assets/world/camp_world_art.webp") as Texture2D
+    # No composite background image: every structure and yard prop is a
+    # separate, scale-controlled object using the existing approved sprites.
+    _place_prop("cabin-day", Vector2(650.0, 326.0), 340.0, 1)
+    _place_prop("shed", Vector2(968.0, 365.0), 206.0, 1)
+    _place_prop("pile-0", Vector2(710.0, 510.0), 144.0, 1)
+    _place_prop("bundle-0", Vector2(931.0, 529.0), 118.0, 1)
+    _place_prop("small-shed", Vector2(1120.0, 479.0), 104.0, 1)
+
+func _place_prop(name: String, foot: Vector2, width: float, depth: int) -> void:
+    var tex: Texture2D = _texture(name)
     if tex == null:
-        push_error("Missing approved camp world asset")
+        push_warning("Missing independent approved prop: " + name)
         return
-    var backdrop := Sprite2D.new()
-    backdrop.name = "PaintedCampWorld"
-    backdrop.texture = tex
-    backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-    backdrop.position = Vector2(640, 360)
-    backdrop.z_index = -20
-    add_child(backdrop)
-    # Cabin, tool shed, yard sign, log racks and lumber loading platform are
-    # part of this single scenic sprite, not duplicated tiny placed sprites.
+    var sprite := Sprite2D.new()
+    sprite.name = "Prop_" + name
+    sprite.texture = tex
+    sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    var world_scale: float = width / float(tex.get_width())
+    sprite.scale = Vector2.ONE * world_scale
+    sprite.position = foot - Vector2(0.0, float(tex.get_height()) * world_scale * 0.5)
+    sprite.z_index = depth
+    add_child(sprite)
 
 func _tree_scale(species: int) -> float:
     var tex: Texture2D = _texture("tree-%s-0" % TYPES[species])
@@ -358,7 +367,18 @@ func _say(words: String) -> void:
     message_text = words
 
 func _draw() -> void:
-    # Shadow and hitpoint overlays remain world objects, never fixed image rectangles.
+    # Simple game ground instead of a misleading painted scene containing
+    # non-interactive trees, duplicate characters, buildings and lumber.
+    draw_rect(Rect2(0, 0, 1280, 720), Color("#537c5b"))
+    for x in range(18, 1280, 72):
+        for y in range(130, 720, 66):
+            var jitter := Vector2(float((x * 7 + y * 11) % 29), float((x * 11 + y * 3) % 27))
+            draw_circle(Vector2(x, y) + jitter, 2.4, Color("#719266"))
+            draw_circle(Vector2(x + 36, y + 24), 1.8, Color("#406c4f"))
+    # An untextured compacted-earth loading pad, not a fake aerial screenshot.
+    draw_circle(YARD_POSITION + Vector2(0, -13), 117.0, Color("#8e845d"))
+    draw_circle(YARD_POSITION + Vector2(0, -13), 106.0, Color("#aa976d"))
+    draw_string(ThemeDB.fallback_font, YARD_POSITION + Vector2(-75, -108), "LOG DROP-OFF", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("#f8e8b5"))
     draw_circle(player_pos + Vector2(0.0, 3.0), 9.0, Color(0.06, 0.11, 0.07, 0.35))
     for tree in trees:
         if int(tree["state"]) == 0 and int(tree["hp"]) < int(tree["max_hp"]):
