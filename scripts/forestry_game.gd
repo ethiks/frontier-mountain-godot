@@ -61,6 +61,7 @@ var mixer_panel: Panel
 var music_slider: HSlider
 var effects_slider: HSlider
 var sound_button: Button
+var mixer_button: Button
 var fullscreen_button: Button
 var top_panel: ColorRect
 var message_text := "Chop a tree, buck the trunk, collect logs, then take them to the signed loading bay."
@@ -196,13 +197,13 @@ func _setup_ui() -> void:
     sound_button.add_theme_font_size_override("font_size", 15)
     sound_button.pressed.connect(_toggle_audio)
     layer.add_child(sound_button)
-    var mix_button := Button.new()
-    mix_button.text = "MIX"
-    mix_button.position = Vector2(1063, 20)
-    mix_button.size = Vector2(75, 51)
-    mix_button.add_theme_font_size_override("font_size", 15)
-    mix_button.pressed.connect(_toggle_mixer)
-    layer.add_child(mix_button)
+    mixer_button = Button.new()
+    mixer_button.text = "MIX"
+    mixer_button.position = Vector2(1063, 20)
+    mixer_button.size = Vector2(75, 51)
+    mixer_button.add_theme_font_size_override("font_size", 15)
+    mixer_button.pressed.connect(_toggle_mixer)
+    layer.add_child(mixer_button)
     fullscreen_button = Button.new()
     fullscreen_button.text = "FULLSCREEN"
     fullscreen_button.position = Vector2(1148, 20)
@@ -272,6 +273,8 @@ func _on_viewport_resized() -> void:
         fullscreen_button.position.x = visible_size.x - 132
     if sound_button != null:
         sound_button.position.x = visible_size.x - 330
+    if mixer_button != null:
+        mixer_button.position.x = visible_size.x - 217
     if mixer_panel != null:
         mixer_panel.position.x = visible_size.x - 404
 
