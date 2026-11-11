@@ -7,6 +7,9 @@ const FRAME_H := 92
 const PLAYER_SPEED := 225.0
 const INTERACT_RADIUS := 98.0
 const LOG_CAPACITY := 4
+const PLAYER_COLLISION_RADIUS := 13.0
+const CABIN_BLOCKER := Rect2(497.0, 222.0, 309.0, 106.0)
+const SHED_BLOCKER := Rect2(887.0, 298.0, 170.0, 69.0)
 const YARD_POSITION := Vector2(802, 564)
 const TYPES := ["pine", "spruce", "birch", "oak"]
 const HEALTH := [2, 3, 2, 4]
@@ -65,13 +68,9 @@ func _ready() -> void:
     _update_hud()
 
 func _setup_background() -> void:
-    # No composite background image: every structure and yard prop is a
-    # separate, scale-controlled object using the existing approved sprites.
+    # No composite backdrop and no decorative log piles: only a cabin and a single toolshed.
     _place_prop("cabin-day", Vector2(650.0, 326.0), 340.0, 1)
     _place_prop("shed", Vector2(968.0, 365.0), 206.0, 1)
-    _place_prop("pile-0", Vector2(710.0, 510.0), 144.0, 1)
-    _place_prop("bundle-0", Vector2(931.0, 529.0), 118.0, 1)
-    _place_prop("small-shed", Vector2(1120.0, 479.0), 104.0, 1)
 
 func _place_prop(name: String, foot: Vector2, width: float, depth: int) -> void:
     var tex: Texture2D = _texture(name)
@@ -85,7 +84,7 @@ func _place_prop(name: String, foot: Vector2, width: float, depth: int) -> void:
     var world_scale: float = width / float(tex.get_width())
     sprite.scale = Vector2.ONE * world_scale
     sprite.position = foot - Vector2(0.0, float(tex.get_height()) * world_scale * 0.5)
-    sprite.z_index = depth
+    sprite.z_index = int(foot.y / 10.0) # sort by ground contact
     add_child(sprite)
 
 func _tree_scale(species: int) -> float:
@@ -107,7 +106,7 @@ func _setup_trees() -> void:
             continue
         var sprite := Sprite2D.new()
         sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-        sprite.z_index = 2
+        sprite.z_index = int(TREE_SPAWNS[i].y / 10.0)
         add_child(sprite)
         _anchor_at_ground(sprite, TREE_SPAWNS[i], tex, _tree_scale(species))
         trees.append({
@@ -129,7 +128,7 @@ func _setup_player() -> void:
     logger.region_enabled = true
     logger.region_rect = Rect2(4 * FRAME_W, 0, FRAME_W, FRAME_H)
     logger.scale = Vector2.ONE * LOGGER_IDLE_SCALE
-    logger.z_index = 4
+    logger.z_index = int(player_pos.y / 10.0)
     add_child(logger)
     _set_player_pose(0, LOGGER_IDLE_SCALE)
 
@@ -192,6 +191,8 @@ func _process(delta: float) -> void:
     elif is_moving:
         row = int(walking_clock) % 4
     _set_player_pose(row, scale)
+    if logger != null:
+        logger.z_index = int(player_pos.y / 10.0)
     var action_down := Input.is_key_pressed(KEY_E) or Input.is_key_pressed(KEY_SPACE) or Input.is_joy_button_pressed(0, JOY_BUTTON_A)
     if action_down and not previous_action_down:
         _interact()
@@ -218,13 +219,45 @@ func _move_player(delta: float) -> void:
     movement = movement.limit_length(1.0)
     is_moving = movement.length() > 0.12
     if is_moving:
-        player_pos += movement * PLAYER_SPEED * delta
-        player_pos.x = clampf(player_pos.x, 32.0, 1248.0)
-        player_pos.y = clampf(player_pos.y, 161.0, 686.0)
+        _move_with_collisions(movement * PLAYER_SPEED * delta)
         facing = posmod(int(round((atan2(movement.y, movement.x) + PI / 2.0) / (PI / 4.0))), 8)
         walking_clock += delta * 7.0
     else:
         walking_clock = 0.0
+
+func _move_with_collisions(delta_pos: Vector2) -> void:
+    # Substep movement so high-delta frames cannot tunnel through trunks or walls.
+    var steps := maxi(1, int(ceil(delta_pos.length() / 7.0)))
+    var part := delta_pos / float(steps)
+    for index in range(steps):
+        var candidate_x := Vector2(clampf(player_pos.x + part.x, 32.0, 1248.0), player_pos.y)
+        if not _collides_at(candidate_x):
+            player_pos.x = candidate_x.x
+        var candidate_y := Vector2(player_pos.x, clampf(player_pos.y + part.y, 161.0, 686.0))
+        if not _collides_at(candidate_y):
+            player_pos.y = candidate_y.y
+
+func _collides_at(candidate: Vector2) -> bool:
+    # Actor origin is between the boots. Broad solid building bases are
+    # intentionally impassable until interiors and door triggers are designed.
+    if CABIN_BLOCKER.grow(PLAYER_COLLISION_RADIUS).has_point(candidate):
+        return true
+    if SHED_BLOCKER.grow(PLAYER_COLLISION_RADIUS).has_point(candidate):
+        return true
+    for tree in trees:
+        var tree_base: Vector2 = tree["pos"]
+        var state: int = int(tree["state"])
+        if state == 3: # small remaining stump, not a contaminated sprite.
+            if candidate.distance_to(tree_base) < PLAYER_COLLISION_RADIUS + 9.0:
+                return true
+        elif state == 1 or state == 2:
+            var species: int = int(tree["type"])
+            var half_length: float = FALLEN_TRUNK_WIDTH[species] * 0.40
+            if absf(candidate.x - tree_base.x) < half_length + PLAYER_COLLISION_RADIUS and absf(candidate.y - tree_base.y) < 20.0 + PLAYER_COLLISION_RADIUS:
+                return true
+        elif candidate.distance_to(tree_base) < PLAYER_COLLISION_RADIUS + 18.0:
+            return true
+    return false
 
 func _animate_trees(delta: float) -> void:
     for tree in trees:
@@ -313,9 +346,10 @@ func _interact() -> void:
 func _buck_tree(tree: Dictionary) -> void:
     var species: int = int(tree["type"])
     tree["state"] = 3
-    var tex := _texture("tree-%s-5" % TYPES[species])
-    if tex != null:
-        _anchor_at_ground(tree["sprite"], tree["pos"], tex, 60.0 / float(tex.get_width()))
+    # The approved tree-%s-5 crop contains neighboring atlas fragments.
+    # Hide the old tree entirely; display only cleaned loose-log sprites.
+    var standing_sprite: Sprite2D = tree["sprite"]
+    standing_sprite.visible = false
     for i in range(YIELDS[species]):
         var separation := (float(i) - float(YIELDS[species] - 1) * 0.5) * 78.0
         _spawn_log(tree["pos"] + Vector2(separation, 19.0 + float(i % 2) * 14.0), species)
@@ -324,14 +358,14 @@ func _buck_tree(tree: Dictionary) -> void:
     _say("Bucked %s into %d scaled logs." % [TYPES[species], YIELDS[species]])
 
 func _spawn_log(pos: Vector2, species: int) -> void:
-    var tex := _texture("loose-%d" % species)
+    var tex := load("res://assets/world/clean_logs/loose-%d.webp" % species) as Texture2D
     var sprite := Sprite2D.new()
     sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     sprite.texture = tex
     if tex != null:
         sprite.scale = Vector2.ONE * (LOOSE_LOG_WIDTH / float(tex.get_width()))
     sprite.position = pos
-    sprite.z_index = 3
+    sprite.z_index = int(pos.y / 10.0)
     add_child(sprite)
     ground_logs.append({"pos": pos, "type": species, "sprite": sprite})
 
