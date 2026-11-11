@@ -37,5 +37,6 @@ jobs:
           git add docs/screenshots/*.png
           if ! git diff --cached --quiet; then
             git commit -m "Add real Godot browser gameplay screenshots"
+            git pull --rebase origin main
             git push origin HEAD:main
           fi
