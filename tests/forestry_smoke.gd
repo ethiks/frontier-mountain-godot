@@ -82,6 +82,17 @@ func _run() -> void:
 		return
 	game.set("player_pos", Vector2(1207, 1323))
 	game.call("_update_visible_chunks", true)
+	var first_tree: Dictionary = game.get("trees")[0]
+	game.set("player_pos", first_tree["pos"] - Vector2(0, 76))
+	game.call("_update_visible_chunks", true)
+	game.call("_update_canopy_occlusion")
+	var near_sprite: Sprite2D = first_tree["sprite"]
+	if not _check(is_instance_valid(near_sprite) and near_sprite.modulate.a < 0.8, "Foreground canopy fades to reveal nearby lumberjack"):
+		quit(1)
+		return
+	game.set("player_pos", Vector2(1207, 1323))
+	game.call("_update_visible_chunks", true)
+	game.call("_update_canopy_occlusion")
 	var tree: Dictionary = game.get("trees")[0]
 	game.set("player_pos", tree["pos"] + Vector2(15, 8))
 	for i in range(int(tree["hp"])):
