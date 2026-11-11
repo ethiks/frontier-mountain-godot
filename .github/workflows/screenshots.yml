@@ -1,0 +1,41 @@
+name: Capture gameplay screenshots
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "tools/capture_live_screenshot.cjs"
+      - ".github/workflows/screenshots.yml"
+permissions:
+  contents: write
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install browser driver
+        run: npm install --no-save playwright-core
+      - name: Capture live Godot gameplay
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node tools/capture_live_screenshot.cjs
+      - name: Upload screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontier-mountain-forestry-screenshots
+          path: docs/screenshots/
+          if-no-files-found: warn
+      - name: Publish gameplay captures to repository
+        run: |
+          git config user.name "frontier-game-ci"
+          git config user.email "frontier-game-ci@users.noreply.github.com"
+          git add docs/screenshots/*.png
+          if ! git diff --cached --quiet; then
+            git commit -m "Add real Godot browser gameplay screenshots"
+            git push origin HEAD:main
+          fi
