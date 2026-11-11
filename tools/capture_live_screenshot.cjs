@@ -47,6 +47,16 @@ async function capture(page, file) {
     await hold(page, "Space", 115); // unload
     await page.waitForTimeout(200);
     await capture(page, "06-loading-yard.png");
+    // New v0.6.1 sound mixer: capture actual imported music/SFX controls.
+    await page.locator("canvas").click({ position: { x: 1094, y: 45 } });
+    await page.waitForTimeout(280);
+    await capture(page, "07-audio-mixer.png");
+    // Fullscreen must be activated by a user gesture, not by page evaluation.
+    await page.locator("canvas").click({ position: { x: 1204, y: 46 } });
+    await page.waitForTimeout(400);
+    const fullscreen = await page.evaluate(() => Boolean(document.fullscreenElement));
+    console.log("FULLSCREEN_FROM_USER_CLICK:", fullscreen);
+    await capture(page, "08-fullscreen.png");
   } finally {
     await browser.close();
   }
