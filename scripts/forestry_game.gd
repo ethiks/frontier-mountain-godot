@@ -367,6 +367,7 @@ func _spawn_log(pos: Vector2, species: int) -> void:
     sprite.texture = tex
     if tex != null:
         sprite.region_enabled = true
+        sprite.region_filter_clip_enabled = true
         sprite.region_rect = LOG_CROP_RECTS[species]
         sprite.scale = Vector2.ONE * (LOOSE_LOG_WIDTH / LOG_CROP_RECTS[species].size.x)
     sprite.position = pos
