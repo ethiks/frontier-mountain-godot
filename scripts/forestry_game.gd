@@ -56,7 +56,7 @@ var instructions: Label
 var message: Label
 var action_button: Button
 var world_time := 0.0
-var audio_engine: Node
+var audio_engine
 var mixer_panel: Panel
 var music_slider: HSlider
 var effects_slider: HSlider
