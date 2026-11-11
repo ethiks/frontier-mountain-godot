@@ -403,6 +403,7 @@ func _input(event: InputEvent) -> void:
 func _process(delta: float) -> void:
     world_time += delta
     _move_player(delta)
+    _update_camera(delta)
     _animate_trees(delta)
     var row := 0 # Authored idle row 4 is missing its boots: use complete standing walk frame 0.
     var scale := LOGGER_IDLE_SCALE
@@ -455,21 +456,23 @@ func _move_with_collisions(delta_pos: Vector2) -> void:
     var steps := maxi(1, int(ceil(delta_pos.length() / 7.0)))
     var part := delta_pos / float(steps)
     for index in range(steps):
-        var candidate_x := Vector2(clampf(player_pos.x + part.x, 32.0, 1248.0), player_pos.y)
+        var candidate_x := Vector2(clampf(player_pos.x + part.x, 33.0, WORLD_SIZE.x - 33.0), player_pos.y)
         if not _collides_at(candidate_x):
             player_pos.x = candidate_x.x
-        var candidate_y := Vector2(player_pos.x, clampf(player_pos.y + part.y, 161.0, 686.0))
+        var candidate_y := Vector2(player_pos.x, clampf(player_pos.y + part.y, 33.0, WORLD_SIZE.y - 33.0))
         if not _collides_at(candidate_y):
             player_pos.y = candidate_y.y
 
 func _collides_at(candidate: Vector2) -> bool:
     # Actor origin is between the boots. Broad solid building bases are
     # intentionally impassable until interiors and door triggers are designed.
-    if CABIN_BLOCKER.grow(PLAYER_COLLISION_RADIUS).has_point(candidate):
+    var local_pos := candidate - HOMESTEAD_ORIGIN
+    if CABIN_BLOCKER.grow(PLAYER_COLLISION_RADIUS).has_point(local_pos):
         return true
-    if SHED_BLOCKER.grow(PLAYER_COLLISION_RADIUS).has_point(candidate):
+    if SHED_BLOCKER.grow(PLAYER_COLLISION_RADIUS).has_point(local_pos):
         return true
-    for tree in trees:
+    for i in _nearby_tree_ids(candidate):
+        var tree: Dictionary = trees[i]
         var tree_base: Vector2 = tree["pos"]
         var state: int = int(tree["state"])
         if state == 3: # small remaining stump, not a contaminated sprite.
@@ -503,7 +506,8 @@ func _animate_trees(delta: float) -> void:
 func _nearest_tree() -> Dictionary:
     var selected: Dictionary = {}
     var best := INTERACT_RADIUS
-    for tree in trees:
+    for i in _nearby_tree_ids(player_pos):
+        var tree: Dictionary = trees[i]
         if int(tree["state"]) == 3:
             continue
         var d: float = player_pos.distance_to(tree["pos"])
@@ -578,7 +582,8 @@ func _buck_tree(tree: Dictionary) -> void:
     # The approved tree-%s-5 crop contains neighboring atlas fragments.
     # Hide the old tree entirely; render only sub-cropped clean approved log sprites.
     var standing_sprite: Sprite2D = tree["sprite"]
-    standing_sprite.visible = false
+    if is_instance_valid(standing_sprite):
+        standing_sprite.visible = false
     for i in range(YIELDS[species]):
         var separation := (float(i) - float(YIELDS[species] - 1) * 0.5) * 78.0
         _spawn_log(tree["pos"] + Vector2(separation, 19.0 + float(i % 2) * 14.0), species)
