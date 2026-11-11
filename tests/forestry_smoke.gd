@@ -18,6 +18,26 @@ func _run() -> void:
 	var game: Node = packed.instantiate()
 	root.add_child(game)
 	await process_frame
+	var audio: Node = game.get_node_or_null("LegacyAudio")
+	if not _check(audio != null, "Legacy audio engine instantiated"):
+		quit(1)
+		return
+	if not _check(audio.get("samples").size() == 8, "All eight original logging effect recordings imported"):
+		quit(1)
+		return
+	var music: AudioStreamPlayer = audio.get("music_player")
+	if not _check(music != null and music.stream != null, "Original Old Growth Stillness track imported"):
+		quit(1)
+		return
+	if not _check(game.get("fullscreen_button") != null and game.has_method("_toggle_fullscreen"), "Fullscreen button and callback available"):
+		quit(1)
+		return
+	if not _check(game.get("music_slider") != null and game.get("effects_slider") != null, "Independent music and effect mixers available"):
+		quit(1)
+		return
+	if not _check(ProjectSettings.get_setting("display/window/stretch/aspect") == "expand", "Game uses fullscreen-friendly expand aspect"):
+		quit(1)
+		return
 	if not _check(game.get("trees").size() >= 8, "Approved trees spawned"):
 		quit(1)
 		return
