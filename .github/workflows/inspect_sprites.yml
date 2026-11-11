@@ -1,0 +1,32 @@
+name: Inspect approved sprite dimensions
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/inspect_sprites.yml"]
+permissions:
+  contents: read
+jobs:
+  crops:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download approved crops
+        run: bash scripts/import_approved_art.sh
+      - name: Upload sprite crops for local inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-sprite-samples
+          path: |
+            assets/approved_sprites/crops/logger-eight-way.webp
+            assets/approved_sprites/crops/tree-pine-0.webp
+            assets/approved_sprites/crops/tree-pine-1.webp
+            assets/approved_sprites/crops/tree-pine-2.webp
+            assets/approved_sprites/crops/tree-pine-3.webp
+            assets/approved_sprites/crops/tree-pine-4.webp
+            assets/approved_sprites/crops/tree-pine-5.webp
+            assets/approved_sprites/crops/loose-0.webp
+            assets/approved_sprites/crops/loose-1.webp
+            assets/approved_sprites/crops/loose-2.webp
+            assets/approved_sprites/crops/loose-3.webp
+            assets/approved_sprites/crops/cabin-day.webp
+            assets/approved_sprites/crops/shed.webp
