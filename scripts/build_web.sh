@@ -10,4 +10,5 @@ unzip -oq /tmp/godot-dist/templates.tpz -d /tmp/godot-dist
 cp /tmp/godot-dist/templates/* "$HOME/.local/share/godot/export_templates/$VERSION.stable/"
 bash scripts/import_approved_art.sh
 /tmp/godot-dist/Godot_v${VERSION}-stable_linux.x86_64 --headless --path . --editor --quit
+/tmp/godot-dist/Godot_v${VERSION}-stable_linux.x86_64 --headless --path . --script res://tests/forestry_smoke.gd
 /tmp/godot-dist/Godot_v${VERSION}-stable_linux.x86_64 --headless --path . --export-release 'Web' web/index.html
