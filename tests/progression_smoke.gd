@@ -26,7 +26,7 @@ func _run() -> void:
     if not _check(p != null and ui != null, "Persistent progression and unified HUD created"):
         quit(1)
         return
-    if not _check(game.get_node_or_null("Daylight") != null and game.get_node_or_null("Prop_trader-open") != null, "Daylight tint and approved trader prop present"):
+    if not _check(game.get_node_or_null("Daylight") != null and game.get_node_or_null("Prop_MarketDistributor") != null, "Daylight tint and newly scaled approved market distributor present"):
         quit(1)
         return
     if not _check(ui.camp_button != null and ui.market_button != null and ui.gear_button != null and ui.save_button != null, "Camp, market, gear and save accessible from single HUD"):
