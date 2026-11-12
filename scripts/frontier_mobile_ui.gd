@@ -97,6 +97,7 @@ var menu_rows: VBoxContainer
 var menu_close: Button
 var market_tabs: HBoxContainer
 var market_tab_buttons: Dictionary = {}
+var shop_a
 var action_hint: Label
 var current_menu := ""
 var is_open := false
@@ -170,6 +171,11 @@ func build(p_game: Node) -> void:
 
     _build_mixer()
     _build_menu()
+    shop_a = preload("res://scripts/frontier_shop_a.gd").new()
+    shop_a.name = "VariationAShop"
+    root.add_child(shop_a)
+    shop_a.setup(self, game)
+    shop_a.visible = false
     resize_layout(get_viewport().get_visible_rect().size)
 
 func _label(parent: Node, value: String, font_size: int, color: Color) -> Label:
@@ -395,6 +401,8 @@ func resize_layout(size: Vector2) -> void:
     ledger_art.position = Vector2.ZERO
     ledger_art.size = menu_panel.size
     _layout_ledger_content()
+    if shop_a != null:
+        shop_a.resize_shop(Vector2(w,h), compact)
 
 func _layout_ledger_content() -> void:
     if menu_panel == null:
@@ -468,6 +476,8 @@ func open_menu(which: String) -> void:
     menu_panel.visible = true
     mixer_panel.visible = false
     refresh_menu()
+    if shop_a != null and current_menu == "MARKET" and market_view == "shop":
+        shop_a.focus_selected()
 
 func _primary_action() -> void:
     if not is_open:
@@ -477,11 +487,22 @@ func close_menu() -> void:
     is_open = false
     shade.visible = false
     menu_panel.visible = false
+    if shop_a != null:
+        shop_a.visible = false
+        shop_a.pending_id = ""
+        shop_a.analog_y = 0.0
     current_menu = ""
 
 func refresh_menu() -> void:
     if not is_open:
         return
+    var show_variation_a: bool = current_menu == "MARKET" and market_view == "shop"
+    menu_panel.visible = not show_variation_a
+    if shop_a != null:
+        shop_a.visible = show_variation_a
+        if show_variation_a:
+            shop_a.refresh_data()
+            return
     for existing in menu_rows.get_children():
         menu_rows.remove_child(existing)
         existing.queue_free()
@@ -554,6 +575,58 @@ func _choose_market_page(name: String) -> void:
     market_view = name
     menu_scroll.scroll_vertical = 0
     refresh_menu()
+    if name == "shop" and shop_a != null:
+        shop_a.focus_selected()
+
+func cycle_market_page(direction: int) -> void:
+    var pages := ["sell", "contracts", "shop", "supplies"]
+    _choose_market_page(str(pages[posmod(pages.find(market_view) + direction, pages.size())]))
+
+func handle_controller_button(button_index: int) -> bool:
+    if not is_open:
+        return false
+    if current_menu == "MARKET":
+        if button_index == JOY_BUTTON_LEFT_SHOULDER:
+            cycle_market_page(-1)
+            return true
+        if button_index == JOY_BUTTON_RIGHT_SHOULDER:
+            cycle_market_page(1)
+            return true
+        if market_view == "shop" and shop_a != null and shop_a.handle_button(button_index):
+            return true
+    if button_index == JOY_BUTTON_B:
+        close_menu()
+        return true
+    if button_index == JOY_BUTTON_Y:
+        open_menu("MARKET")
+        return true
+    if button_index == JOY_BUTTON_X:
+        open_menu("GEAR")
+        return true
+    return false
+
+func handle_controller_axis(axis: int, value: float) -> bool:
+    if not is_open:
+        return false
+    if current_menu == "MARKET" and market_view == "shop" and shop_a != null:
+        return shop_a.set_axis(axis, value)
+    return false
+
+func handle_keyboard(keycode: int) -> bool:
+    if not is_open:
+        return false
+    if current_menu == "MARKET" and keycode == KEY_Q:
+        cycle_market_page(-1)
+        return true
+    if current_menu == "MARKET" and keycode == KEY_E:
+        cycle_market_page(1)
+        return true
+    if current_menu == "MARKET" and market_view == "shop" and shop_a != null and shop_a.handle_keyboard(keycode):
+        return true
+    if keycode == KEY_ESCAPE:
+        close_menu()
+        return true
+    return false
 
 func _sell_page() -> void:
     var dealer = game.distributor
