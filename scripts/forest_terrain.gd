@@ -167,7 +167,7 @@ func _build_paths_and_yard() -> void:
             var path_mask := 0
             var yard_mask := 0
             for j in range(4):
-                var point := p + MASK_CORNER_POS[j]
+                var point: Vector2 = p + MASK_CORNER_POS[j]
                 var corner_x := x + (1 if j == 1 or j == 2 else 0)
                 var corner_y := y + (1 if j == 2 or j == 3 else 0)
                 var wiggle := (hash01(corner_x, corner_y, 90) - 0.5) * 5.0
