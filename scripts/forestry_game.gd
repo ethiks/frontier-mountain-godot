@@ -478,17 +478,14 @@ func _collides_at(candidate: Vector2) -> bool:
         return true
     for i in _nearby_tree_ids(candidate):
         var tree: Dictionary = trees[i]
+        # Tree collision exists ONLY while a tree is standing.
+        # The final chop changes state to 1 immediately, releasing the old
+        # trunk hitbox before the falling animation ends and before bucking.
+        # Fallen timber stays visible and buckable, but is not solid.
+        if int(tree["state"]) != 0:
+            continue
         var tree_base: Vector2 = tree["pos"]
-        var state: int = int(tree["state"])
-        if state == 3: # small remaining stump, not a contaminated sprite.
-            if candidate.distance_to(tree_base) < PLAYER_COLLISION_RADIUS + 9.0:
-                return true
-        elif state == 1 or state == 2:
-            var species: int = int(tree["type"])
-            var half_length: float = FALLEN_TRUNK_WIDTH[species] * 0.40
-            if absf(candidate.x - tree_base.x) < half_length + PLAYER_COLLISION_RADIUS and absf(candidate.y - tree_base.y) < 20.0 + PLAYER_COLLISION_RADIUS:
-                return true
-        elif candidate.distance_to(tree_base) < PLAYER_COLLISION_RADIUS + 18.0:
+        if candidate.distance_to(tree_base) < PLAYER_COLLISION_RADIUS + 18.0:
             return true
     return false
 
