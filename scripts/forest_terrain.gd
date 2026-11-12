@@ -130,9 +130,11 @@ func _biome_at(cell: Vector2i, p: Vector2) -> int:
     return 1 # open meadow pockets among woodland
 
 func _build_transitions(biomes: Array[PackedInt32Array]) -> void:
-    # Transition tiles are derived from the approved 3 material pair groups.
-    # Use them sparingly where two ground biomes meet, without random boxes.
+    # Choose a transition mask from the actual four tile corners rather than
+    # a random variant. Adjacent cells share their corner samples, so patches
+    # no longer form arbitrary 32px squares at the forest biome boundaries.
     var groups := [[0, 5], [2, 3], [1, 4]]
+    var approved_masks := [1, 2, 4, 8, 3, 6, 12, 9, 5, 10, 7, 14]
     for y in range(1, WORLD_TILES.y - 1):
         for x in range(1, WORLD_TILES.x - 1):
             var biome: int = biomes[y][x]
@@ -141,18 +143,35 @@ func _build_transitions(biomes: Array[PackedInt32Array]) -> void:
                 var high: int = groups[group_idx][1]
                 if biome != low and biome != high:
                     continue
-                var neighbor_mask := 0
-                if biomes[y - 1][x] != biome and (biomes[y - 1][x] == low or biomes[y - 1][x] == high):
-                    neighbor_mask |= 1
-                if biomes[y][x + 1] != biome and (biomes[y][x + 1] == low or biomes[y][x + 1] == high):
-                    neighbor_mask |= 2
-                if biomes[y + 1][x] != biome and (biomes[y + 1][x] == low or biomes[y + 1][x] == high):
-                    neighbor_mask |= 4
-                if biomes[y][x - 1] != biome and (biomes[y][x - 1] == low or biomes[y][x - 1] == high):
-                    neighbor_mask |= 8
-                if neighbor_mask != 0 and hash01(x, y, 57) < 0.83:
-                    var transition_variant := posmod(neighbor_mask * 3 + x * 5 + y * 7, 12)
-                    _set_tile(transition_layer, Vector2i(x, y), 24 + group_idx * 12 + transition_variant)
+                var vertex_mask := 0
+                var corner_offsets := [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 1), Vector2i(0, 1)]
+                for j in range(4):
+                    var cx: int = x + corner_offsets[j].x
+                    var cy: int = y + corner_offsets[j].y
+                    var high_votes := 0
+                    var low_votes := 0
+                    for dy in range(-1, 1):
+                        for dx in range(-1, 1):
+                            var adjacent: int = biomes[cy + dy][cx + dx]
+                            if adjacent == high:
+                                high_votes += 1
+                            elif adjacent == low:
+                                low_votes += 1
+                    if high_votes > 0 and high_votes >= low_votes:
+                        vertex_mask |= (1 << j)
+                if vertex_mask == 0 or vertex_mask == 15:
+                    break
+                var nearest := 0
+                var best_distance := 5
+                for j in range(approved_masks.size()):
+                    var mismatch := 0
+                    for bit in range(4):
+                        if bool(vertex_mask & (1 << bit)) != bool(approved_masks[j] & (1 << bit)):
+                            mismatch += 1
+                    if mismatch < best_distance:
+                        best_distance = mismatch
+                        nearest = j
+                _set_tile(transition_layer, Vector2i(x, y), 24 + group_idx * 12 + nearest)
                 break
 
 func _build_paths_and_yard() -> void:
@@ -170,8 +189,8 @@ func _build_paths_and_yard() -> void:
                 var point: Vector2 = p + MASK_CORNER_POS[j]
                 var corner_x := x + (1 if j == 1 or j == 2 else 0)
                 var corner_y := y + (1 if j == 2 or j == 3 else 0)
-                var wiggle := (hash01(corner_x, corner_y, 90) - 0.5) * 5.0
-                if _path_distance(point) < 23.0 + wiggle:
+                var wiggle := (hash01(corner_x, corner_y, 90) - 0.5) * 2.0
+                if _path_distance(point) < 27.0 + wiggle:
                     path_mask |= (1 << j)
                 if _inside_yard(point, wiggle):
                     yard_mask |= (1 << j)
