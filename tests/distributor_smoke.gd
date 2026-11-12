@@ -22,7 +22,7 @@ func _run() -> void:
     if not _check(market != null and ui != null,"Distributor and UI systems installed"):
         quit(1);return
     var stall: Sprite2D = game.get_node_or_null("Prop_MarketDistributor")
-    if not _check(stall != null and stall.texture != null and stall.texture.get_width() * stall.scale.x >= 400.0,"Approved market stall scales clerk with logger"):
+    if not _check(stall != null and stall.texture != null and stall.texture.get_width() * stall.scale.x >= 280.0 and stall.texture.get_width() * stall.scale.x <= 290.0,"Approved merchant kiosk reduced exactly thirty percent"):
         quit(1);return
     var coins = game.get("trade_sfx")
     if not _check(coins != null and coins.get("purchase_sound") != null and coins.get("sale_sound") != null, "Separate purchase and sale coin generators installed"):
@@ -44,11 +44,11 @@ func _run() -> void:
     if not _check(market.SHOP.size() == 17 and market.SUPPLY_SHOP.size() == 3,"Full 17-item distributor catalog and three supply types listed"):
         quit(1);return
     ui.open_menu("MARKET")
-    if not _check(ui.market_view == "sell" and ui.menu_rows.get_child_count() > 8,"Market has selectable species stock ledger"):
+    if not _check(ui.market_view == "sell" and ui.shop_a.visible and ui.shop_a.filtered_items.size() == 7,"Unified market has all seven sellable timber entries"):
         quit(1);return
     ui.market_view = "contracts"
     ui.refresh_menu()
-    if not _check(ui.menu_rows.get_child_count() > 7,"Buyer offer board renders"):
+    if not _check(ui.shop_a.page == "contracts" and ui.shop_a.filtered_items.size() >= 4,"Contracts use identical market header and buyer offer board"):
         quit(1);return
     ui.market_view = "shop"
     ui.refresh_menu()
@@ -56,7 +56,7 @@ func _run() -> void:
         quit(1);return
     ui.market_view = "supplies"
     ui.refresh_menu()
-    if not _check(ui.menu_rows.get_child_count() > 7,"Supplies and processing service menu renders"):
+    if not _check(ui.shop_a.page == "supplies" and ui.shop_a.filtered_items.size() >= 5,"Supplies and services share the same split-view market frame"):
         quit(1);return
     ui.close_menu()
     if not _check(market.total_raw() == 0,"Depot starts without decorative or phantom logs"):
