@@ -146,6 +146,7 @@ func buy_axe(game: Node) -> bool:
     game.set("cash", int(game.get("cash")) - price)
     axe_level += 1
     condition = AXE_CONDITION[axe_level]
+    game.trade_sfx.play_purchase(game.audio_engine)
     game.call("_say", "Equipped %s. Improved chopping power and durability." % axe_name())
     save_game(game)
     return true
@@ -160,6 +161,7 @@ func buy_cart(game: Node) -> bool:
         return false
     game.set("cash", int(game.get("cash")) - price)
     cart_level += 1
+    game.trade_sfx.play_purchase(game.audio_engine)
     game.call("_say", "%s capacity: %d logs. Cart graphic pending art approval." % [cart_name(), capacity()])
     save_game(game)
     return true
@@ -175,6 +177,7 @@ func repair_tool(game: Node) -> bool:
         return false
     game.set("cash", int(game.get("cash")) - cost)
     condition = maximum
+    game.trade_sfx.play_purchase(game.audio_engine)
     game.call("_say", "Cutting tool repaired for $%d." % cost)
     save_game(game)
     return true
@@ -192,6 +195,7 @@ func refill_fuel(game: Node) -> bool:
         return false
     game.set("cash", int(game.get("cash")) - FUEL_REFILL_COST)
     fuel = max_fuel
+    game.trade_sfx.play_purchase(game.audio_engine)
     game.call("_say", "Chainsaw refuelled.")
     save_game(game)
     return true
