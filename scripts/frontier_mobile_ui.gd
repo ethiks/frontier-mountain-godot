@@ -31,6 +31,7 @@ var ui_atlas: Texture2D
 var banner_art: TextureRect
 var message_art: TextureRect
 var ledger_art: NinePatchRect
+var menu_header_art: NinePatchRect
 var market_view := "sell"
 var shop_filter := "all"
 var sale_quantities := [0,0,0,0,0,0,0]
@@ -269,6 +270,19 @@ func _build_menu() -> void:
     ledger_art.patch_margin_bottom = 61
     ledger_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
     menu_panel.add_child(ledger_art)
+    # Mobile uses the approved blank timber sign instead of shrinking the
+    # elaborate antler roof into half of the available phone screen.
+    menu_header_art = NinePatchRect.new()
+    menu_header_art.name = "ApprovedCompactWoodHeader"
+    menu_header_art.texture = _region_texture("message")
+    menu_header_art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    menu_header_art.patch_margin_left = 29
+    menu_header_art.patch_margin_right = 31
+    menu_header_art.patch_margin_top = 24
+    menu_header_art.patch_margin_bottom = 23
+    menu_header_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    menu_header_art.visible = false
+    menu_panel.add_child(menu_header_art)
     menu_title = _label(menu_panel, "FIELD LEDGER", 19, Color("#3b2c21"))
     menu_title.add_theme_color_override("font_shadow_color", Color.TRANSPARENT)
     menu_title.add_theme_constant_override("shadow_offset_x", 0)
@@ -387,18 +401,45 @@ func _layout_ledger_content() -> void:
         return
     var width_px := menu_panel.size.x
     var height_px := menu_panel.size.y
-    var heading_y := 114.0 if compact else 128.0
-    menu_title.position = Vector2(74.0, heading_y)
-    menu_title.add_theme_font_size_override("font_size", 18 if compact else 21)
-    menu_close.position = Vector2(width_px - 146.0, heading_y - 9.0)
-    menu_close.size = Vector2(88.0, 37.0)
     market_tabs.visible = current_menu == "MARKET"
-    market_tabs.position = Vector2(65.0, heading_y + 47.0)
-    market_tabs.size = Vector2(width_px - 130.0, 45.0)
-    var scroll_start := heading_y + (99.0 if current_menu == "MARKET" else 56.0)
-    menu_scroll.position = Vector2(67.0, scroll_start)
-    menu_scroll.size = Vector2(width_px - 134.0, maxf(45.0, height_px - scroll_start - 68.0))
-    menu_rows.custom_minimum_size.x = width_px - 155.0
+    if compact:
+        # Purpose-built landscape phone ledger. Uses approved blank wood
+        # banner and the game's parchment/green palette, while preserving
+        # most of the screen for real, touch-scrollable market content.
+        ledger_art.visible = false
+        menu_header_art.visible = true
+        menu_panel.add_theme_stylebox_override("panel", _style(Color("#ddc29a"), Color("#684127"), 6))
+        menu_header_art.position = Vector2(6.0, 6.0)
+        menu_header_art.size = Vector2(width_px - 12.0, 61.0)
+        menu_title.position = Vector2(29.0, 21.0)
+        menu_title.add_theme_color_override("font_color", Color("#fff1ce"))
+        menu_title.add_theme_font_size_override("font_size", 18)
+        menu_close.position = Vector2(width_px - 111.0, 16.0)
+        menu_close.size = Vector2(90.0, 39.0)
+        market_tabs.position = Vector2(16.0, 73.0)
+        market_tabs.size = Vector2(width_px - 32.0, 45.0)
+        var start_y := 126.0 if current_menu == "MARKET" else 80.0
+        menu_scroll.position = Vector2(20.0, start_y)
+        menu_scroll.size = Vector2(width_px - 40.0, maxf(70.0, height_px - start_y - 23.0))
+        menu_rows.custom_minimum_size.x = width_px - 60.0
+    else:
+        # On desktop, retain the ornate approved frame. Move copy entirely
+        # below the roof and within the parchment, away from its cloth props.
+        ledger_art.visible = true
+        menu_header_art.visible = false
+        menu_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+        menu_title.position = Vector2(115.0, 129.0)
+        menu_title.add_theme_color_override("font_color", Color("#4e301e"))
+        menu_title.add_theme_font_size_override("font_size", 20)
+        menu_close.position = Vector2(width_px - 149.0, 121.0)
+        menu_close.size = Vector2(89.0, 38.0)
+        market_tabs.position = Vector2(103.0, 176.0)
+        market_tabs.size = Vector2(width_px - 206.0, 45.0)
+        var start_y := 231.0 if current_menu == "MARKET" else 180.0
+        menu_scroll.position = Vector2(126.0, start_y)
+        menu_scroll.size = Vector2(width_px - 231.0, maxf(82.0, height_px - start_y - 105.0))
+        menu_rows.custom_minimum_size.x = width_px - 255.0
+
 
 func update_header() -> void:
     if game == null:
