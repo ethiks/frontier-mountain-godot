@@ -67,6 +67,7 @@ func _update_quantity_controls() -> void:
     for control in [qty_minus,qty_plus,qty_max,qty_display]:
         control.visible = showing
     item_price.visible = not showing
+    item_state.visible = not showing and not compact
     if not showing:
         return
     var entry: Dictionary = _selected_item()
@@ -125,7 +126,7 @@ func _sync_filters() -> void:
     var count: int = categories.size()
     for i in range(category_buttons.size()):
         var button: Button = category_buttons[i]
-        var index: int = i % 5
+        var index: int = int(i / 2) # base screen stores desktop/mobile category buttons interleaved
         button.visible = index < count
         if index >= count:
             continue
@@ -233,6 +234,16 @@ func _refresh_detail() -> void:
     if game == null or item_title == null:
         return
     if page == "shop":
+        # Restore equipment icon/detail layout when switching back from a
+        # text-heavy contract or stock page.
+        if compact:
+            var icon_w := minf(93.0, detail_panel.size.x * 0.33)
+            var copy_x := 14.0 + icon_w
+            item_description.position = Vector2(copy_x, 40.0)
+            item_description.size = Vector2(detail_panel.size.x - copy_x - 12.0, maxf(28.0, detail_panel.size.y - 135.0))
+        else:
+            item_description.position = Vector2(15.0, 50.0 + detail_icon.size.y)
+            item_description.size = Vector2(detail_panel.size.x - 30.0, maxf(34.0, detail_panel.size.y - (50.0 + detail_icon.size.y) - 112.0))
         super._refresh_detail()
         _update_quantity_controls()
         return
@@ -253,8 +264,13 @@ func _refresh_detail() -> void:
     item_title.text = str(entry["name"]).to_upper()
     item_description.text = str(entry["detail"])
     detail_icon.visible = false
-    no_icon.visible = true
-    no_icon.text = str(entry["category"]).to_upper() + "\nFRONTIER SUPPLY"
+    no_icon.visible = false
+    # Non-equipment pages use the full detail space for readable contracts,
+    # prices and sale descriptions, instead of drawing a placeholder icon
+    # directly on top of those instructions.
+    item_description.position = Vector2(15.0, 53.0 if compact else 63.0)
+    item_description.size = Vector2(detail_panel.size.x - 30.0, maxf(43.0, detail_panel.size.y - (142.0 if compact else 185.0)))
+    item_description.add_theme_font_size_override("font_size", 13 if compact else 17)
     var cost: int = int(entry["price"])
     var eligible := false
     var label_text := "SELECT"
