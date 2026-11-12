@@ -1,9 +1,9 @@
-// Final unified parchment ledger, relocated market and distinct trade sound build: real Render Godot web screenshots.
+// Cache-busted final deployment capture: check kiosk relocation and unified parchment UI on the actual live build.
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { chromium } = require("playwright-core");
-const URL = "https://frontier-mountain-godot.onrender.com/";
+const URL = "https://frontier-mountain-godot.onrender.com/?review=distributor-overhaul-final-20261111";
 const OUTPUT = path.resolve("docs/screenshots");
 
 async function hold(page, key, ms) {
