@@ -64,6 +64,13 @@ func _run() -> void:
 	if not _check(game.get_node_or_null("ForestTerrain") != null and game.get_node_or_null("PaintedCampWorld") == null, "Procedural terrain without composite background"):
 		quit(1)
 		return
+	var terrain: Node2D = game.get_node("ForestTerrain")
+	if not _check(terrain.call("_surface_type", Vector2(1662, 1313), 138, 109) == 4, "Log landing uses the new pixel-grid compacted earth surface"):
+		quit(1)
+		return
+	if not _check(terrain.call("_surface_type", Vector2(1565, 1116), 130, 93) == 2, "Cabin trail uses the same pixel-art ground material"):
+		quit(1)
+		return
 	var following_camera: Camera2D = game.get("camera")
 	if not _check(following_camera != null and following_camera.limit_right == 3072 and following_camera.limit_bottom == 2432, "Smooth camera within 96x76 world boundaries"):
 		quit(1)
