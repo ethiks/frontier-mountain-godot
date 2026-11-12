@@ -134,6 +134,7 @@ func setup(p_host, p_game) -> void:
 
     detail_panel = _panel(frame, "Details", COLORS.parchment)
     item_title = _label(detail_panel, "LOG CART", 23, COLORS.ink)
+    item_title.clip_text = true
     item_description = _label(detail_panel, "Carry up to 8 logs.", 17, COLORS.ink)
     item_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     detail_icon = TextureRect.new()
@@ -256,22 +257,43 @@ func resize_shop(available_size: Vector2, mobile: bool) -> void:
     item_title.position = Vector2(16.0, 12.0)
     item_title.size = Vector2(detail_panel.size.x - 32.0, 31.0)
     item_title.add_theme_font_size_override("font_size", 18 if compact else 23)
-    var image_height := minf(160.0, maxf(55.0, content_h * (0.28 if compact else 0.38)))
-    detail_icon.position = Vector2(18.0, 47.0)
-    detail_icon.size = Vector2(detail_panel.size.x - 36.0, image_height)
-    no_icon.position = detail_icon.position
-    no_icon.size = detail_icon.size
-    var info_y := 50.0 + image_height
-    item_description.position = Vector2(15.0, info_y)
-    item_description.size = Vector2(detail_panel.size.x - 30.0, maxf(34.0, content_h - info_y - 112.0))
-    item_description.add_theme_font_size_override("font_size", 13 if compact else 17)
-    item_price.position = Vector2(17.0, content_h - 111.0)
-    item_price.add_theme_font_size_override("font_size", 18 if compact else 23)
-    item_state.position = Vector2(16.0, content_h - 86.0)
-    item_state.size = Vector2(detail_panel.size.x - 30.0, 22.0)
-    item_state.add_theme_font_size_override("font_size", 12 if compact else 14)
-    buy_button.position = Vector2(13.0, content_h - 58.0)
-    buy_button.size = Vector2(detail_panel.size.x - 26.0, 46.0)
+    if compact:
+        # In phone landscape, place picture and description side-by-side;
+        # a stacked 160px detail card would overlap its Buy button.
+        var icon_w := minf(93.0, detail_panel.size.x * 0.33)
+        detail_icon.position = Vector2(9.0, 37.0)
+        detail_icon.size = Vector2(icon_w, minf(86.0, maxf(45.0, content_h - 127.0)))
+        no_icon.position = detail_icon.position
+        no_icon.size = detail_icon.size
+        var copy_x := 14.0 + icon_w
+        item_description.position = Vector2(copy_x, 40.0)
+        item_description.size = Vector2(detail_panel.size.x - copy_x - 12.0, maxf(28.0, content_h - 135.0))
+        item_description.add_theme_font_size_override("font_size", 12)
+        item_price.position = Vector2(copy_x, content_h - 93.0)
+        item_price.add_theme_font_size_override("font_size", 18)
+        item_state.visible = false
+        buy_button.position = Vector2(12.0, content_h - 49.0)
+        buy_button.size = Vector2(detail_panel.size.x - 24.0, 39.0)
+        buy_button.add_theme_font_size_override("font_size", 16)
+    else:
+        var image_height := minf(160.0, maxf(55.0, content_h * 0.38))
+        detail_icon.position = Vector2(18.0, 47.0)
+        detail_icon.size = Vector2(detail_panel.size.x - 36.0, image_height)
+        no_icon.position = detail_icon.position
+        no_icon.size = detail_icon.size
+        var info_y := 50.0 + image_height
+        item_description.position = Vector2(15.0, info_y)
+        item_description.size = Vector2(detail_panel.size.x - 30.0, maxf(34.0, content_h - info_y - 112.0))
+        item_description.add_theme_font_size_override("font_size", 17)
+        item_price.position = Vector2(17.0, content_h - 111.0)
+        item_price.add_theme_font_size_override("font_size", 23)
+        item_state.visible = true
+        item_state.position = Vector2(16.0, content_h - 86.0)
+        item_state.size = Vector2(detail_panel.size.x - 30.0, 22.0)
+        item_state.add_theme_font_size_override("font_size", 14)
+        buy_button.position = Vector2(13.0, content_h - 58.0)
+        buy_button.size = Vector2(detail_panel.size.x - 26.0, 46.0)
+        buy_button.add_theme_font_size_override("font_size", 19)
     back_button.position = Vector2(18.0, h - 47.0)
     back_button.size = Vector2(114.0, 37.0)
     footer.position = Vector2(144.0, h - 44.0)
@@ -351,13 +373,24 @@ func _build_rows() -> void:
         var item_name: String = str(item["name"])
         var price: int = int(item["price"])
         var owned: bool = game.distributor.is_owned(id)
-        var item_text := "  " + item_name + ("  ·  OWNED" if owned else "  ·  $%d" % price)
+        var item_text := ("          " if ITEM_ICONS.has(id) else "  ") + item_name + ("  ·  OWNED" if owned else "  ·  $%d" % price)
         var btn := _button(item_rows, item_text, false)
         btn.name = "Item_" + id
         btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
         btn.add_theme_font_size_override("font_size", 13 if compact else 16)
         btn.custom_minimum_size = Vector2(item_scroll.size.x - 24.0, 48.0 if compact else 58.0)
         btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        if ITEM_ICONS.has(id):
+            var icon := TextureRect.new()
+            icon.name = "ApprovedThumbnail_" + id
+            icon.texture = _icon_texture(id)
+            icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+            icon.position = Vector2(3.0, 3.0)
+            icon.size = Vector2(69.0, 49.0 if not compact else 41.0)
+            icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+            icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+            icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+            btn.add_child(icon)
         btn.pressed.connect(func(): select_item_by_id(id))
         btn.focus_entered.connect(func(): select_item_by_id(id, false))
         list_buttons.append(btn)
