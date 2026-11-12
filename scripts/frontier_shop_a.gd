@@ -76,7 +76,7 @@ func setup(p_host, p_game) -> void:
 
     header_art = NinePatchRect.new()
     header_art.name = "ApprovedWoodHeader"
-    header_art.texture = host._region_texture("message")
+    header_art.texture = host._world_texture("bar_long")
     header_art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     header_art.patch_margin_left = 32
     header_art.patch_margin_right = 33
@@ -210,7 +210,7 @@ func _button(parent: Node, caption: String, dark: bool) -> Button:
         # narrow mobile controls; dynamic text stays above the artwork.
         var wood := NinePatchRect.new()
         wood.name = "ApprovedCarvedWood"
-        wood.texture = host._region_texture("message")
+        wood.texture = host._world_texture("bar_short")
         wood.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
         wood.patch_margin_left = 33
         wood.patch_margin_right = 33
