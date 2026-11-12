@@ -272,9 +272,18 @@ func resize_shop(available_size: Vector2, mobile: bool) -> void:
         item_price.position = Vector2(copy_x, content_h - 93.0)
         item_price.add_theme_font_size_override("font_size", 18)
         item_state.visible = false
+        # Clear large desktop font/style content margins: otherwise Godot
+        # enforces a 71px minimum button height in a 160px phone detail card.
+        buy_button.add_theme_font_size_override("font_size", 14)
+        for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+            var skin := _style(COLORS.pine if state != "disabled" else Color("#665c4b"), COLORS.gold, 2)
+            skin.content_margin_top = 0
+            skin.content_margin_bottom = 0
+            skin.content_margin_left = 4
+            skin.content_margin_right = 4
+            buy_button.add_theme_stylebox_override(state, skin)
         buy_button.position = Vector2(12.0, content_h - 49.0)
         buy_button.size = Vector2(detail_panel.size.x - 24.0, 39.0)
-        buy_button.add_theme_font_size_override("font_size", 16)
     else:
         var image_height := minf(160.0, maxf(55.0, content_h * 0.38))
         detail_icon.position = Vector2(18.0, 47.0)
@@ -291,9 +300,14 @@ func resize_shop(available_size: Vector2, mobile: bool) -> void:
         item_state.position = Vector2(16.0, content_h - 86.0)
         item_state.size = Vector2(detail_panel.size.x - 30.0, 22.0)
         item_state.add_theme_font_size_override("font_size", 14)
+        for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+            var skin := _style(COLORS.pine if state != "disabled" else Color("#665c4b"), COLORS.gold, 2)
+            skin.content_margin_top = 3
+            skin.content_margin_bottom = 3
+            buy_button.add_theme_stylebox_override(state, skin)
+        buy_button.add_theme_font_size_override("font_size", 18)
         buy_button.position = Vector2(13.0, content_h - 58.0)
         buy_button.size = Vector2(detail_panel.size.x - 26.0, 46.0)
-        buy_button.add_theme_font_size_override("font_size", 19)
     back_button.position = Vector2(18.0, h - 47.0)
     back_button.size = Vector2(114.0, 37.0)
     footer.position = Vector2(144.0, h - 44.0)
