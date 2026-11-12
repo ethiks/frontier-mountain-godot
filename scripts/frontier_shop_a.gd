@@ -349,7 +349,7 @@ func _sync_filters() -> void:
         return
     for index in range(category_buttons.size()):
         var btn: Button = category_buttons[index]
-        var key: String = str(CATEGORIES[index % CATEGORIES.size()][0])
+        var key: String = str(CATEGORIES[int(index / 2)][0])
         var on := key == selected_category
         btn.add_theme_stylebox_override("normal", _style(COLORS.pine if on else COLORS.frame, COLORS.gold if on else COLORS.edge, 3 if on else 2))
         btn.add_theme_color_override("font_color", COLORS.cream if on else Color("#deccac"))
