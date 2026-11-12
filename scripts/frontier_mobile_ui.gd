@@ -356,6 +356,9 @@ func resize_layout(size: Vector2) -> void:
     var action_w := 154.0 if compact else 184.0
     action_button.size = Vector2(action_w, 77.0 if compact else 90.0)
     action_button.position = Vector2(w - action_w - 18.0, h - action_button.size.y - 19.0)
+    action_hint.position = Vector2(action_button.position.x - 11.0, action_button.position.y - 31.0)
+    action_hint.size = Vector2(action_w + 22.0, 24.0)
+    action_hint.add_theme_font_size_override("font_size", 14 if compact else 16)
     var menu_w := 91.0 if compact else 105.0
     var menu_y := action_button.position.y - 58.0
     for i in range(3):
@@ -366,20 +369,33 @@ func resize_layout(size: Vector2) -> void:
     mixer_panel.position = Vector2(w - 305.0, 59)
     shade.position = Vector2.ZERO
     shade.size = Vector2(w, h)
-    var panel_w := minf(610.0, w - 46.0)
-    var panel_h := minf(552.0, h - 42.0)
+    # Preserve the approved frame's aspect ratio rather than stretching it
+    # to the whole screen. The ledger stays inside safe landscape margins.
+    var panel_h := minf(574.0, h - 20.0)
+    var panel_w := minf(750.0, panel_h * 1.39, w - 40.0)
     menu_panel.size = Vector2(panel_w, panel_h)
+    menu_panel.position = Vector2((w - panel_w) * 0.5, (h - panel_h) * 0.5)
     ledger_art.position = Vector2.ZERO
     ledger_art.size = menu_panel.size
+    _layout_ledger_content()
 
-    menu_panel.position = Vector2((w - panel_w) * 0.5, (h - panel_h) * 0.5)
-    menu_title.position = Vector2(70.0, 77.0)
-    menu_title.add_theme_color_override("font_color", Color("#432e1c"))
-    menu_close.position = Vector2(panel_w - 135.0, 69.0)
-    menu_close.size = Vector2(96, 42)
-    menu_scroll.position = Vector2(57, 127)
-    menu_scroll.size = Vector2(panel_w - 115.0, panel_h - 167.0)
-    menu_rows.custom_minimum_size.x = panel_w - 139.0
+func _layout_ledger_content() -> void:
+    if menu_panel == null:
+        return
+    var width_px := menu_panel.size.x
+    var height_px := menu_panel.size.y
+    var heading_y := 114.0 if compact else 128.0
+    menu_title.position = Vector2(74.0, heading_y)
+    menu_title.add_theme_font_size_override("font_size", 18 if compact else 21)
+    menu_close.position = Vector2(width_px - 146.0, heading_y - 9.0)
+    menu_close.size = Vector2(88.0, 37.0)
+    market_tabs.visible = current_menu == "MARKET"
+    market_tabs.position = Vector2(65.0, heading_y + 47.0)
+    market_tabs.size = Vector2(width_px - 130.0, 45.0)
+    var scroll_start := heading_y + (99.0 if current_menu == "MARKET" else 56.0)
+    menu_scroll.position = Vector2(67.0, scroll_start)
+    menu_scroll.size = Vector2(width_px - 134.0, maxf(45.0, height_px - scroll_start - 68.0))
+    menu_rows.custom_minimum_size.x = width_px - 155.0
 
 func update_header() -> void:
     if game == null:
@@ -426,6 +442,7 @@ func refresh_menu() -> void:
         menu_rows.remove_child(existing)
         existing.queue_free()
     menu_title.text = "CAMP LEDGER" if current_menu == "CAMP" else ("MARKET DISTRIBUTOR" if current_menu == "MARKET" else "GEAR & TOOLS")
+    _layout_ledger_content()
     var progress = game.progression
     var dealer = game.distributor
     if current_menu == "CAMP":
@@ -459,14 +476,18 @@ func refresh_menu() -> void:
                 _sell_page()
 
 func _paragraph(text_value: String, accent: bool = false) -> void:
-    var row := _label(menu_rows, text_value, 17 if accent else 15, Color("#583b25") if accent else Color("#302519"))
+    var row := _label(menu_rows, text_value, 17 if accent else 15, Color("#5c3d25") if accent else Color("#382b1f"))
+    row.add_theme_color_override("font_shadow_color", Color.TRANSPARENT)
+    row.add_theme_constant_override("shadow_offset_x", 0)
+    row.add_theme_constant_override("shadow_offset_y", 0)
     row.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     row.custom_minimum_size.y = 37.0 if accent else (58.0 if "\n" in text_value else 32.0)
 
 func _menu_button(title: String, callback: Callable, enabled: bool = true) -> void:
     var b := _button(menu_rows, title, 15, false)
-    _decorate_button(b, "green")
+    # The approved parchment frame supplies art; text buttons use a matching
+    # clean wood-tone StyleBox instead of the old cropped "CAMP" lettering.
     b.add_theme_color_override("font_color", CREAM)
     b.add_theme_color_override("font_hover_color", Color.WHITE)
     b.custom_minimum_size.y = 45
@@ -475,21 +496,19 @@ func _menu_button(title: String, callback: Callable, enabled: bool = true) -> vo
     b.pressed.connect(callback)
 
 func _market_navigation() -> void:
-    var row := HBoxContainer.new()
-    row.add_theme_constant_override("separation", 5)
-    menu_rows.add_child(row)
-    for entry in [["sell","SELL"],["contracts","ORDERS"],["shop","SHOP"],["supplies","SUPPLY"]]:
-        var key: String = str(entry[0])
-        var b := _button(row, str(entry[1]), 13, false)
-        _decorate_button(b, "green")
-        b.add_theme_color_override("font_color", CREAM)
-        b.custom_minimum_size = Vector2(104,46)
-        b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-        b.modulate = Color.WHITE if key == market_view else Color(0.76,0.76,0.69,1.0)
-        b.pressed.connect(func(): _choose_market_page(key))
+    # Tabs remain fixed outside the scrolling order book. Unlike the
+    # previous sliced green-button crop, these buttons contain no baked
+    # lettering that could conflict with the runtime labels.
+    for key in market_tab_buttons.keys():
+        var button: Button = market_tab_buttons[key]
+        var selected := str(key) == market_view
+        button.add_theme_stylebox_override("normal", _style(Color("#527044") if selected else Color("#32462f"), Color("#e7c58c") if selected else Color("#936f44"), 2))
+        button.add_theme_color_override("font_color", Color("#fff0cc") if selected else Color("#dccba8"))
+        button.add_theme_color_override("font_hover_color", Color.WHITE)
 
 func _choose_market_page(name: String) -> void:
     market_view = name
+    menu_scroll.scroll_vertical = 0
     refresh_menu()
 
 func _sell_page() -> void:
@@ -536,7 +555,6 @@ func _sell_stock_row(index: int) -> void:
 
 func _row_button(parent: HBoxContainer, label_text: String, fn: Callable, enabled: bool = true) -> void:
     var b := _button(parent,label_text,15,false)
-    _decorate_button(b,"green")
     b.add_theme_color_override("font_color", CREAM)
     b.custom_minimum_size.y = 45
     b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
