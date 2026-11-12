@@ -604,7 +604,8 @@ func _interact() -> void:
     if not progression.can_chop():
         _say("Tool needs repair%s. Open GEAR." % (" and fuel" if progression.axe_level == 3 and progression.fuel < 1.0 else ""))
         return
-    tree["hp"] = maxi(0, int(tree["hp"]) - progression.chop_power())
+    var cutting_power: int = progression.chop_power() + (2 if distributor.is_owned("chain") and progression.axe_level == 3 else 0)
+    tree["hp"] = maxi(0, int(tree["hp"]) - cutting_power)
     progression.expend_chop()
     audio_engine.play_fx("chainsaw-rev" if progression.axe_level == 3 else "axe-chop", 0.93)
     swing_kind = "chop"
