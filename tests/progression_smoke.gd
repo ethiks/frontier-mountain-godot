@@ -36,6 +36,12 @@ func _run() -> void:
         quit(1)
         return
     ui.resize_layout(Vector2(844.0, 390.0))
+    ui.open_menu("MARKET")
+    if not _check(ui.menu_header_art.visible and not ui.ledger_art.visible and ui.menu_scroll.size.y >= 170.0, "Mobile market uses compact wood header with useful parchment scrolling space"):
+        quit(1)
+        return
+    ui.close_menu()
+
     if not _check(ui.action_button.position.x + ui.action_button.size.x <= 844.0 and ui.action_button.position.y + ui.action_button.size.y <= 390.0, "Landscape phone action button stays within 844x390 viewport"):
         quit(1)
         return
