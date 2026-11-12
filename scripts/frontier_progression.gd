@@ -59,6 +59,8 @@ func tick(delta: float, game: Node) -> void:
         day_seconds = fmod(day_seconds, DAY_SECONDS)
         day += 1
         _new_contract()
+        if game.get("distributor") != null:
+            game.distributor.on_new_day(day)
         game.call("_say", "Day %d dawns. Timber prices and the contract board have changed." % day)
         save_game(game)
         autosave_elapsed = 0.0
@@ -74,6 +76,8 @@ func rest(game: Node) -> bool:
     day += 1
     day_seconds = 30.0
     _new_contract()
+    if game.get("distributor") != null:
+        game.distributor.on_new_day(day)
     game.call("_say", "Rested at the cabin. Day %d — fresh market and contract." % day)
     save_game(game)
     return true
@@ -211,7 +215,8 @@ func save_game(game: Node, path: String = SAVE_PATH) -> bool:
         "axe": axe_level, "cart": cart_level,
         "condition": condition, "fuel": fuel,
         "contract": [contract_species, contract_goal, contract_progress, contract_claimed, contract_reward],
-        "delivered": total_delivered, "earned": total_earned
+        "delivered": total_delivered, "earned": total_earned,
+        "distributor": game.distributor.export_data() if game.get("distributor") != null else {}
     }
     var temp_path := path + ".tmp"
     var file := FileAccess.open(temp_path, FileAccess.WRITE)
@@ -303,6 +308,8 @@ func load_game(game: Node, path: String = SAVE_PATH) -> bool:
         var species := int(item[2])
         if lp.x >= 0 and lp.x <= 3072 and lp.y >= 0 and lp.y <= 2432 and species >= 0 and species < 4:
             game.call("_spawn_log", lp, species)
+    if game.get("distributor") != null:
+        game.distributor.import_data(data.get("distributor", {}), day)
     game.call("_rebuild_tree_sprites")
     autosave_elapsed = 0.0
     loaded_saved_game = true
