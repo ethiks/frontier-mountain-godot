@@ -9,7 +9,7 @@ const CABIN_ENTRY := HOMESTEAD_ORIGIN + Vector2(707.0, 352.0)
 const SHED_ENTRY := HOMESTEAD_ORIGIN + Vector2(962.0, 392.0)
 const DISTRIBUTOR_POSITION := HOMESTEAD_ORIGIN + Vector2(968.0, 365.0)
 const DISTRIBUTOR_COUNTER := DISTRIBUTOR_POSITION
-const DISTRIBUTOR_WIDTH := 408.0
+const DISTRIBUTOR_WIDTH := 285.6 # user-requested 30% reduction from 408
 const FRAME_W := 84
 const FRAME_H := 92
 const PLAYER_SPEED := 225.0
@@ -131,8 +131,7 @@ func _setup_background() -> void:
     _place_distributor()
 
 func _place_distributor() -> void:
-    # Approved distributor sprite: the clerk's visible body is now ~52 px,
-    # comparable to the 52px lumberjack rather than the former 134px-wide stall.
+    # The entire approved market kiosk is reduced to 70% of its former scale.
     var tex := load("res://assets/ui/approved_stall.webp") as Texture2D
     if tex == null:
         push_error("Missing approved distributor stall art")
@@ -484,7 +483,7 @@ func _collides_at(candidate: Vector2) -> bool:
         return true
     # The timber-market kiosk counter has a solid footprint, but the front
     # interaction space remains clear for the lumberjack.
-    var kiosk_base := Rect2(DISTRIBUTOR_POSITION + Vector2(-188, -70), Vector2(376, 63))
+    var kiosk_base := Rect2(DISTRIBUTOR_POSITION + Vector2(-132.0, -49.0), Vector2(264.0, 44.0))
     if kiosk_base.grow(PLAYER_COLLISION_RADIUS * 0.55).has_point(candidate):
         return true
     for i in _nearby_tree_ids(candidate):
@@ -700,6 +699,8 @@ func _standing_count() -> int:
 
 func _say(words: String) -> void:
     message_text = words
+    if ui != null:
+        ui.reveal_message(words)
 
 func _draw() -> void:
     # Environment ground and paths come from the streamed terrain node.
