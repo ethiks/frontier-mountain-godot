@@ -1,4 +1,4 @@
-// Frontier Mountain collision-on-felling and pixel-art paths / log landing review (actual deployed WebGL canvas).
+// Approved Terrain Pack v1.0 visual verification: real deployed Godot TileMapLayer / biome screenshots.
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
@@ -40,6 +40,7 @@ async function start(page) {
   try {
     await start(page);
     await screenshot(page, "01-forest.png");
+    await screenshot(page, "12-approved-terrain-homestead.png");
     await hold(page, "a", 960);
     await hold(page, "s", 480); // approach approved birch at the clearing edge
     await screenshot(page, "02-approach-tree.png");
@@ -60,6 +61,7 @@ async function start(page) {
     await screenshot(page, "06-loading-yard.png");
     await hold(page, "d", 3200);
     await screenshot(page, "09-east-woods.png");
+    await screenshot(page, "13-approved-terrain-east-forest.png");
     await hold(page, "w", 3100);
     await screenshot(page, "10-north-woods.png");
     await page.locator("canvas").click({ position: { x: 1093, y: 44 } });
