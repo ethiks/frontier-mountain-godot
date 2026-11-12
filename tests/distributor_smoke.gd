@@ -37,7 +37,7 @@ func _run() -> void:
         quit(1);return
     if not _check(ui.market_tabs.get_parent() == ui.menu_panel and ui.market_tab_buttons.size() == 4, "Market navigation tabs fixed outside scroll region"):
         quit(1);return
-    if not _check(ui.action_button.text == "" and ui.action_hint != null and ui.action_hint.text != "", "ACTION art lettering remains undoubled; contextual prompt separate"):
+    if not _check(ui.action_button.text != "" and ui.action_hint != null and not ui.action_hint.visible, "Blank approved button art displays exactly one dynamic action label"):
         quit(1);return
     if not _check(ui.market_tabs.get_node_or_null("Approved_green") == null, "Menu tabs do not reuse cut-off baked-label artwork"):
         quit(1);return
