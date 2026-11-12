@@ -41,7 +41,7 @@ func _run() -> void:
 	if not _check(game.get("trees").size() >= 110, "Over 110 approved trees populate the larger forest"):
 		quit(1)
 		return
-	if not _check(game.get_node_or_null("Prop_shed") != null and game.get_node_or_null("Prop_small-shed") == null, "Exactly one toolshed prop"):
+	if not _check(game.get_node_or_null("Prop_shed") == null and game.get_node_or_null("Prop_small-shed") == null and game.get_node_or_null("Prop_MarketDistributor") != null, "Toolshed removed and approved market moved to its location"):
 		quit(1)
 		return
 	if not _check(game.get_node_or_null("Prop_pile-0") == null and game.get_node_or_null("Prop_bundle-0") == null, "Loading area has no decorative log props"):
@@ -50,7 +50,11 @@ func _run() -> void:
 	if not _check(game.call("_collides_at", Vector2(1510, 1030)), "Cabin footprint blocks player"):
 		quit(1)
 		return
-	if not _check(game.call("_collides_at", Vector2(1830, 1096)), "Toolshed footprint blocks player"):
+	if not _check(game.call("_collides_at", Vector2(1830, 1096)), "Relocated distributor counter blocks player"):
+		quit(1)
+		return
+	var stall_sprite: Sprite2D = game.get_node("Prop_MarketDistributor")
+	if not _check(stall_sprite.position.x >= 1800.0 and stall_sprite.position.x <= 1860.0 and absf(stall_sprite.scale.x - 1.0) < 0.2, "Distributor occupies old toolshed clearing at logger-matched scale"):
 		quit(1)
 		return
 	if not _check(game.call("_collides_at", Vector2(1140, 1386)), "Standing tree trunk blocks player"):
