@@ -303,10 +303,10 @@ func resize_layout(size: Vector2) -> void:
 
     hud.position = Vector2(16, 10)
     hud.add_theme_font_size_override("font_size", 18 if compact else 23)
-    instructions.position = Vector2(400 if compact else 424, 24)
-    instructions.add_theme_font_size_override("font_size", 14 if compact else 16)
-    navigation_label.position = Vector2(400 if compact else 424, 54)
-    navigation_label.add_theme_font_size_override("font_size", 12 if compact else 14)
+    instructions.position = Vector2(384 if compact else 424, 24)
+    instructions.add_theme_font_size_override("font_size", 12 if compact else 16)
+    navigation_label.position = Vector2(384 if compact else 424, 54)
+    navigation_label.add_theme_font_size_override("font_size", 11 if compact else 14)
     message.position = Vector2(16, 111 if compact else 117)
     message.size = Vector2(minf(w - 43.0, 525.0), 47)
     message_backdrop.position = message.position - Vector2(8, 4)
@@ -359,8 +359,14 @@ func update_header() -> void:
     var progress = game.progression
     var money: int = int(game.get("cash"))
     hud.text = ""  # The approved banner already has the logo lettering.
-    instructions.text = "DAY %d  %s  •  $%d  •  %s" % [progress.day, progress.clock_string(), money, progress.axe_name()]
-    navigation_label.text = "LOGS %d/%d  •  TOOL %d%%  •  HOME %d tiles" % [game.get("carried").size(), progress.capacity(), int(progress.condition / progress.AXE_CONDITION[progress.axe_level] * 100.0), int(game.get("player_pos").distance_to(game.YARD_POSITION) / 32.0)]
+    if compact:
+        # Two genuinely short lines fit between the approved logo and
+        # the four fixed utility icons on a 390px landscape phone.
+        instructions.text = "D%d %s  $%d" % [progress.day, progress.clock_string(), money]
+        navigation_label.text = "%d/%d LOGS · %d%%" % [game.get("carried").size(), progress.capacity(), int(progress.condition / progress.AXE_CONDITION[progress.axe_level] * 100.0)]
+    else:
+        instructions.text = "DAY %d  %s  •  $%d  •  %s" % [progress.day, progress.clock_string(), money, progress.axe_name()]
+        navigation_label.text = "LOGS %d/%d  •  TOOL %d%%  •  HOME %d tiles" % [game.get("carried").size(), progress.capacity(), int(progress.condition / progress.AXE_CONDITION[progress.axe_level] * 100.0), int(game.get("player_pos").distance_to(game.YARD_POSITION) / 32.0)]
     message.text = game.get("message_text")
     sound_button.modulate = Color.WHITE if game.audio_engine.enabled else Color(0.75, 0.50, 0.45, 0.85)
     if is_open and current_menu != "":
