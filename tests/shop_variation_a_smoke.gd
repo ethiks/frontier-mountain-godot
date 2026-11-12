@@ -104,7 +104,7 @@ func _run() -> void:
         return
     # Controller shoulders move between shop and other distributor pages.
     ui.handle_controller_button(JOY_BUTTON_RIGHT_SHOULDER)
-    if not _check(ui.market_view == "supplies" and not shop.visible and ui.menu_panel.visible, "RB changes distributor page and restores common ledger"):
+    if not _check(ui.market_view == "supplies" and shop.visible and not ui.menu_panel.visible and shop.page == "supplies", "RB changes page content without changing header or frame"):
         quit(1)
         return
     ui.handle_controller_button(JOY_BUTTON_LEFT_SHOULDER)
