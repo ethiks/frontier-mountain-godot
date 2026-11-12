@@ -52,7 +52,7 @@ func _run() -> void:
         quit(1);return
     ui.market_view = "shop"
     ui.refresh_menu()
-    if not _check(ui.menu_rows.get_child_count() > 15,"Original distributor shop listings render"):
+    if not _check(ui.shop_a.visible and ui.shop_a.filtered_items.size() == 17 and ui.shop_a.item_rows.get_child_count() == 17,"Variation A shows all 17 distributor items in focused inventory list"):
         quit(1);return
     ui.market_view = "supplies"
     ui.refresh_menu()
