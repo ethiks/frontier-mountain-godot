@@ -27,6 +27,80 @@ const UI_REGIONS := {
     "joystick": Rect2(0,610,162,167)
 }
 const APPROVED_UI := "res://assets/ui/approved_ui.webp"
+const WORLD_UI_ATLAS := "res://assets/ui/world_ui_unified_atlas.png"
+const WORLD_UI_REGIONS := {
+    "bar_short": Rect2(0,0,268,59),
+    "bar_medium": Rect2(290,0,442,66),
+    "bar_long": Rect2(750,0,797,86),
+    "utility_sound": Rect2(0,112,102,89),
+    "utility_mix": Rect2(120,112,103,89),
+    "utility_save": Rect2(240,112,102,89),
+    "utility_full": Rect2(360,112,103,89),
+    "title_camp": Rect2(500,112,183,86),
+    "title_market": Rect2(705,112,187,86),
+    "title_gear": Rect2(912,112,179,86)
+}
+var world_ui_atlas: Texture2D
+var status_plate: TextureRect
+var hint_seconds := 5.0
+var last_hint := ""
+func _world_texture(name: String) -> AtlasTexture:
+    var region := AtlasTexture.new()
+    region.atlas = world_ui_atlas
+    region.region = WORLD_UI_REGIONS[name]
+    region.filter_clip = true
+    return region
+
+func _world_image(parent: Node, asset_name: String) -> TextureRect:
+    var image_node := TextureRect.new()
+    image_node.name = "WorldArt_" + asset_name
+    image_node.texture = _world_texture(asset_name)
+    image_node.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    image_node.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    image_node.stretch_mode = TextureRect.STRETCH_SCALE
+    image_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    parent.add_child(image_node)
+    return image_node
+
+func _carve_button(button: Button, asset_name: String = "bar_short") -> void:
+    # NinePatchRect makes one approved blank wood frame work at any button width.
+    var empty := StyleBoxEmpty.new()
+    for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+        button.add_theme_stylebox_override(state, empty)
+    var art := NinePatchRect.new()
+    art.name = "UnifiedCarvedWood"
+    art.texture = _world_texture(asset_name)
+    art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    art.patch_margin_left = 24
+    art.patch_margin_right = 24
+    art.patch_margin_top = 18
+    art.patch_margin_bottom = 18
+    art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    art.show_behind_parent = true
+    button.add_child(art)
+    art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    button.add_theme_color_override("font_color", CREAM)
+    button.add_theme_color_override("font_hover_color", Color.WHITE)
+    button.add_theme_stylebox_override("focus", _style(Color.TRANSPARENT, GOLD, 3))
+
+func reveal_message(words: String) -> void:
+    last_hint = words
+    hint_seconds = 5.0
+    if message != null:
+        message.text = words
+        message.modulate.a = 1.0
+    if message_art != null:
+        message_art.modulate.a = 1.0
+
+func _process(delta: float) -> void:
+    if message == null or message_art == null:
+        return
+    if hint_seconds > 0.0:
+        hint_seconds = maxf(0.0, hint_seconds - delta)
+    var opacity := clampf(hint_seconds / 0.75, 0.0, 1.0)
+    message.modulate.a = opacity
+    message_art.modulate.a = opacity
+
 var ui_atlas: Texture2D
 var banner_art: TextureRect
 var message_art: TextureRect
@@ -107,6 +181,7 @@ var ui_scale := 1.0
 func build(p_game: Node) -> void:
     game = p_game
     ui_atlas = load(APPROVED_UI) as Texture2D
+    world_ui_atlas = load(WORLD_UI_ATLAS) as Texture2D
     root = Control.new()
     root.name = "UnifiedHUD"
     root.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -117,6 +192,7 @@ func build(p_game: Node) -> void:
     top_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(top_panel)
     banner_art = _image(top_panel, "banner")
+    status_plate = _world_image(root, "bar_medium")
     hud = _label(root, "FRONTIER MOUNTAIN", 22, GOLD)
     instructions = _label(root, "DAY 1 07:36  |  $0", 17, CREAM)
     navigation_label = _label(root, "LOGS 0/4  |  CAMP AXE", 15, MUTED)
@@ -126,6 +202,7 @@ func build(p_game: Node) -> void:
     message_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(message_backdrop)
     message_art = _image(root, "message")
+    message_art.texture = _world_texture("bar_long")
     message = _label(root, "Chop · Buck · Haul · Sell", 15, GOLD)
     message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     # Retain the approved virtual joystick and 8-direction logger.
@@ -156,6 +233,8 @@ func build(p_game: Node) -> void:
     # texture. The original action crop already contains CHOP lettering and
     # cannot display PICK UP/BUCK/UNLOAD without doubled text.
     _decorate_button(action_button, "message")
+    action_button.get_node("Approved_message").visible = false
+    _carve_button(action_button, "bar_short")
     action_button.add_theme_color_override("font_color", CREAM)
     action_button.add_theme_color_override("font_hover_color", Color.WHITE)
     action_hint = _label(root, "", 14, GOLD)
@@ -167,15 +246,31 @@ func build(p_game: Node) -> void:
     _decorate_button(mixer_button, "mix", true)
     _decorate_button(save_button, "save", true)
     _decorate_button(fullscreen_button, "full", true)
+    # Paint utility icons directly over the world, never in an opaque bar.
+    sound_button.get_node("Approved_sound").texture = _world_texture("utility_sound")
+    mixer_button.get_node("Approved_mix").texture = _world_texture("utility_mix")
+    save_button.get_node("Approved_save").texture = _world_texture("utility_save")
+    fullscreen_button.get_node("Approved_full").texture = _world_texture("utility_full")
+    top_panel.visible = false
+    banner_art.visible = false
+    hud.visible = false
+    message_backdrop.visible = false
+    # Market/Camp/Gear are accessed from their physical world locations and
+    # existing keyboard/gamepad shortcuts, not by blocking gameplay at right.
+    camp_button.visible = false
+    market_button.visible = false
+    gear_button.visible = false
+
 
 
     _build_mixer()
     _build_menu()
-    shop_a = preload("res://scripts/frontier_shop_a.gd").new()
+    shop_a = preload("res://scripts/frontier_market_unified.gd").new()
     shop_a.name = "VariationAShop"
     root.add_child(shop_a)
     shop_a.setup(self, game)
     shop_a.visible = false
+    reveal_message(str(game.get("message_text")))
     resize_layout(get_viewport().get_visible_rect().size)
 
 func _label(parent: Node, value: String, font_size: int, color: Color) -> Label:
@@ -349,47 +444,43 @@ func resize_layout(size: Vector2) -> void:
     root.position = Vector2.ZERO
     root.scale = Vector2.ONE * ui_scale
     root.size = Vector2(w, h)
-    top_panel.position = Vector2.ZERO
-    top_panel.size = Vector2(w, 98.0 if compact else 104.0)
-    banner_art.position = Vector2.ZERO
-    banner_art.size = Vector2(maxf(510.0, w - 325.0), top_panel.size.y)
-
-    hud.position = Vector2(16, 10)
-    hud.add_theme_font_size_override("font_size", 18 if compact else 23)
-    instructions.position = Vector2(384 if compact else 424, 24)
-    instructions.add_theme_font_size_override("font_size", 12 if compact else 16)
-    navigation_label.position = Vector2(384 if compact else 424, 54)
+    # Compact, floating world HUD: everything overlays game imagery.
+    top_panel.visible = false
+    banner_art.visible = false
+    hud.visible = false
+    status_plate.position = Vector2(9.0, 7.0)
+    status_plate.size = Vector2(295.0 if compact else 350.0, 69.0)
+    instructions.position = Vector2(34.0, 20.0)
+    instructions.size = Vector2(status_plate.size.x - 44.0, 23.0)
+    navigation_label.position = Vector2(34.0, 46.0)
+    navigation_label.size = Vector2(status_plate.size.x - 44.0, 20.0)
+    instructions.add_theme_font_size_override("font_size", 13 if compact else 16)
     navigation_label.add_theme_font_size_override("font_size", 11 if compact else 14)
-    message.position = Vector2(16, 111 if compact else 117)
-    message.size = Vector2(minf(w - 43.0, 525.0), 47)
-    message_backdrop.position = message.position - Vector2(8, 4)
-    message_backdrop.size = Vector2(message.size.x + 16, 51)
-    message_art.position = message_backdrop.position - Vector2(4, 6)
-    message_art.size = Vector2(message_backdrop.size.x + 8, message_backdrop.size.y + 9)
-
+    message_backdrop.visible = false
+    message_art.position = Vector2(10.0, 84.0)
+    message_art.size = Vector2(minf(w * 0.66, 508.0), 59.0)
+    message.position = message_art.position + Vector2(20.0, 14.0)
+    message.size = message_art.size - Vector2(36.0, 16.0)
     message.add_theme_font_size_override("font_size", 13 if compact else 15)
-    var tool_w := 68.0 if compact else 80.0
-    var gap := 5.0
-    var start_x := w - (tool_w * 4.0 + gap * 3.0) - 11.0
+    # Tap targets are independent 54px game buttons, floating over the map.
+    var tool_w := 58.0 if compact else 62.0
+    var tool_h := 54.0 if compact else 58.0
+    var gap := 6.0
+    var start_x := w - (tool_w * 4.0 + gap * 3.0) - 10.0
     for i in range(4):
-        var b: Button = [sound_button, mixer_button, save_button, fullscreen_button][i]
-        b.position = Vector2(start_x + float(i) * (tool_w + gap), 12)
-        b.size = Vector2(tool_w, 42.0)
-        b.add_theme_font_size_override("font_size", 12 if compact else 14)
-    var stick_y := h - 190.0
-    joystick.position = Vector2(11, stick_y)
-    var action_w := 154.0 if compact else 184.0
-    action_button.size = Vector2(action_w, 77.0 if compact else 90.0)
-    action_button.position = Vector2(w - action_w - 18.0, h - action_button.size.y - 19.0)
+        var button_node: Button = [sound_button,mixer_button,save_button,fullscreen_button][i]
+        button_node.position = Vector2(start_x + float(i) * (tool_w + gap), 10.0)
+        button_node.size = Vector2(tool_w, tool_h)
+    joystick.position = Vector2(11.0,h - 190.0)
+    var action_w := 164.0 if compact else 186.0
+    action_button.size = Vector2(action_w, 74.0 if compact else 82.0)
+    action_button.position = Vector2(w - action_w - 16.0,h - action_button.size.y - 19.0)
     action_hint.visible = false
-    var menu_w := 91.0 if compact else 105.0
-    var menu_y := action_button.position.y - 58.0
-    for i in range(3):
-        var b: Button = [camp_button, market_button, gear_button][i]
-        b.size = Vector2(menu_w, 47)
-        b.position = Vector2(w - (menu_w * 3.0 + 5.0 * 2.0) - 18.0 + float(i) * (menu_w + 5), menu_y)
-    mixer_panel.size = Vector2(292, 197)
-    mixer_panel.position = Vector2(w - 305.0, 59)
+    camp_button.visible = false
+    market_button.visible = false
+    gear_button.visible = false
+    mixer_panel.size = Vector2(292.0,197.0)
+    mixer_panel.position = Vector2(w - 305.0, 76.0)
     shade.position = Vector2.ZERO
     shade.size = Vector2(w, h)
     # Preserve the approved frame's aspect ratio rather than stretching it
@@ -456,6 +547,7 @@ func update_header() -> void:
     var money: int = int(game.get("cash"))
     hud.text = ""  # The approved banner already has the logo lettering.
     if compact:
+        # Compact floating status strip; no permanent game logo.
         # Two genuinely short lines fit between the approved logo and
         # the four fixed utility icons on a 390px landscape phone.
         instructions.text = "D%d %s  $%d" % [progress.day, progress.clock_string(), money]
@@ -463,7 +555,9 @@ func update_header() -> void:
     else:
         instructions.text = "DAY %d  %s  •  $%d  •  %s" % [progress.day, progress.clock_string(), money, progress.axe_name()]
         navigation_label.text = "LOGS %d/%d  •  TOOL %d%%  •  HOME %d tiles" % [game.get("carried").size(), progress.capacity(), int(progress.condition / progress.AXE_CONDITION[progress.axe_level] * 100.0), int(game.get("player_pos").distance_to(game.YARD_POSITION) / 32.0)]
-    message.text = game.get("message_text")
+    var new_hint: String = str(game.get("message_text"))
+    if new_hint != last_hint:
+        reveal_message(new_hint)
     sound_button.modulate = Color.WHITE if game.audio_engine.enabled else Color(0.75, 0.50, 0.45, 0.85)
     if is_open and current_menu != "":
         # Text refresh happens after transactions; don't rebuild scroll every frame.
@@ -476,7 +570,7 @@ func open_menu(which: String) -> void:
     menu_panel.visible = true
     mixer_panel.visible = false
     refresh_menu()
-    if shop_a != null and current_menu == "MARKET" and market_view == "shop":
+    if shop_a != null and current_menu == "MARKET":
         shop_a.focus_selected()
 
 func _primary_action() -> void:
@@ -496,12 +590,12 @@ func close_menu() -> void:
 func refresh_menu() -> void:
     if not is_open:
         return
-    var show_variation_a: bool = current_menu == "MARKET" and market_view == "shop"
+    var show_variation_a: bool = current_menu == "MARKET"
     menu_panel.visible = not show_variation_a
     if shop_a != null:
         shop_a.visible = show_variation_a
         if show_variation_a:
-            shop_a.refresh_data()
+            shop_a.set_page(market_view)
             return
     for existing in menu_rows.get_children():
         menu_rows.remove_child(existing)
@@ -551,6 +645,7 @@ func _paragraph(text_value: String, accent: bool = false) -> void:
 
 func _menu_button(title: String, callback: Callable, enabled: bool = true) -> void:
     var b := _button(menu_rows, title, 15, false)
+    _carve_button(b)
     # The approved parchment frame supplies art; text buttons use a matching
     # clean wood-tone StyleBox instead of the old cropped "CAMP" lettering.
     b.add_theme_color_override("font_color", CREAM)
@@ -575,7 +670,7 @@ func _choose_market_page(name: String) -> void:
     market_view = name
     menu_scroll.scroll_vertical = 0
     refresh_menu()
-    if name == "shop" and shop_a != null:
+    if shop_a != null and current_menu == "MARKET":
         shop_a.focus_selected()
 
 func cycle_market_page(direction: int) -> void:
@@ -592,7 +687,7 @@ func handle_controller_button(button_index: int) -> bool:
         if button_index == JOY_BUTTON_RIGHT_SHOULDER:
             cycle_market_page(1)
             return true
-        if market_view == "shop" and shop_a != null and shop_a.handle_button(button_index):
+        if shop_a != null and shop_a.handle_button(button_index):
             return true
     if button_index == JOY_BUTTON_B:
         close_menu()
@@ -608,7 +703,7 @@ func handle_controller_button(button_index: int) -> bool:
 func handle_controller_axis(axis: int, value: float) -> bool:
     if not is_open:
         return false
-    if current_menu == "MARKET" and market_view == "shop" and shop_a != null:
+    if current_menu == "MARKET" and shop_a != null:
         return shop_a.set_axis(axis, value)
     return false
 
@@ -621,7 +716,7 @@ func handle_keyboard(keycode: int) -> bool:
     if current_menu == "MARKET" and keycode == KEY_E:
         cycle_market_page(1)
         return true
-    if current_menu == "MARKET" and market_view == "shop" and shop_a != null and shop_a.handle_keyboard(keycode):
+    if current_menu == "MARKET" and shop_a != null and shop_a.handle_keyboard(keycode):
         return true
     if keycode == KEY_ESCAPE:
         close_menu()
