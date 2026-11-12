@@ -284,10 +284,10 @@ func adjust_quantity(amount: int) -> void:
 
 func handle_button(button_index: int) -> bool:
     if page == "sell":
-        if button_index == JOY_BUTTON_LEFT_TRIGGER:
+        if button_index == JOY_BUTTON_X:
             adjust_quantity(-1)
             return true
-        if button_index == JOY_BUTTON_RIGHT_TRIGGER:
+        if button_index == JOY_BUTTON_Y:
             adjust_quantity(1)
             return true
     return super.handle_button(button_index)
@@ -301,3 +301,18 @@ func handle_keyboard(keycode: int) -> bool:
             adjust_quantity(1)
             return true
     return super.handle_keyboard(keycode)
+
+var left_trigger_held := false
+var right_trigger_held := false
+func set_axis(axis: int, value: float) -> bool:
+    if page == "sell" and axis == JOY_AXIS_TRIGGER_LEFT:
+        if value > 0.65 and not left_trigger_held:
+            adjust_quantity(-1)
+        left_trigger_held = value > 0.45
+        return true
+    if page == "sell" and axis == JOY_AXIS_TRIGGER_RIGHT:
+        if value > 0.65 and not right_trigger_held:
+            adjust_quantity(1)
+        right_trigger_held = value > 0.45
+        return true
+    return super.set_axis(axis,value)
