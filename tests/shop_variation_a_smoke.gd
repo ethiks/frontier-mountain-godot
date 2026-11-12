@@ -104,6 +104,7 @@ func _run() -> void:
     if not _check(shop.compact and shop.category_mobile.visible and not shop.category_panel.visible, "phone landscape replaces vertical rail with five responsive category chips"):
         quit(1)
         return
+    print("LAYOUT_DEBUG item=", shop.item_panel.size, " detail=", shop.detail_panel.size, " buy_pos=", shop.buy_button.position, " buy_size=", shop.buy_button.size, " ui_scale=", ui.ui_scale)
     if not _check(shop.item_panel.size.x > 210.0 and shop.detail_panel.size.x > 200.0 and shop.buy_button.position.y + shop.buy_button.size.y <= shop.detail_panel.size.y, "phone shop retains side-by-side inventory and touch-safe purchase panel"):
         quit(1)
         return
