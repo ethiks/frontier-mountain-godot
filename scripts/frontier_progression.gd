@@ -67,7 +67,8 @@ func tick(delta: float, game: Node) -> void:
         save_game(game)
 
 func rest(game: Node) -> bool:
-    if game.get("player_pos").distance_to(game.CABIN_ENTRY) > 94.0:
+    var position: Vector2 = game.get("player_pos")
+    if position.distance_to(Vector2(1567.0, 1112.0)) > 94.0:
         game.call("_say", "Rest at the cabin door.")
         return false
     day += 1
@@ -108,7 +109,6 @@ func sell_logs(game: Node, entries: Array) -> Dictionary:
     game.set("cash", int(game.get("cash")) + income + bonus)
     total_delivered += entries.size()
     total_earned += income + bonus
-    save_game(game)
     return {"income": income, "bonus": bonus, "count": entries.size()}
 
 func axe_name() -> String:
