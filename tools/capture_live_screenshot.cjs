@@ -1,4 +1,4 @@
-// Approved carved-wood UI / legacy distributor scene visual QA. Real Render Godot canvas.
+// Final unified parchment ledger, relocated market and distinct trade sound build: real Render Godot web screenshots.
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
@@ -45,13 +45,13 @@ async function start(page) {
     await page.waitForTimeout(240);
     await screenshot(page, "14-trader-market.png");
     // The parchment ledger nav is 4 tabs; capture contracts, shop and supplies.
-    await page.locator("canvas").click({ position: { x: 541, y: 318 } });
+    await page.locator("canvas").click({ position: { x: 560, y: 270 } });
     await page.waitForTimeout(180);
     await screenshot(page, "20-buyer-contracts.png");
-    await page.locator("canvas").click({ position: { x: 665, y: 318 } });
+    await page.locator("canvas").click({ position: { x: 720, y: 270 } });
     await page.waitForTimeout(180);
     await screenshot(page, "21-distributor-shop.png");
-    await page.locator("canvas").click({ position: { x: 780, y: 318 } });
+    await page.locator("canvas").click({ position: { x: 876, y: 270 } });
     await page.waitForTimeout(180);
     await screenshot(page, "22-distributor-supplies.png");
     await page.keyboard.press("Escape");
