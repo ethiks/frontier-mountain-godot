@@ -1,4 +1,4 @@
-// Approved Terrain Pack v1.0 final visual QA: blended forest biomes, contiguous paths, lumberyard and mobile WebGL.
+// Frontier Mountain phases 2-4: true Godot WebGL captures of unified mobile HUD, market, gear, saves and game loop.
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
@@ -40,6 +40,19 @@ async function start(page) {
   try {
     await start(page);
     await screenshot(page, "01-forest.png");
+    // Desktop market/shop/camp panels are inspected without altering world state.
+    await page.locator("canvas").click({ position: { x: 1096, y: 577 } });
+    await page.waitForTimeout(240);
+    await screenshot(page, "14-trader-market.png");
+    await page.keyboard.press("Escape");
+    await page.locator("canvas").click({ position: { x: 1209, y: 577 } });
+    await page.waitForTimeout(240);
+    await screenshot(page, "15-equipment-upgrades.png");
+    await page.keyboard.press("Escape");
+    await page.locator("canvas").click({ position: { x: 983, y: 577 } });
+    await page.waitForTimeout(240);
+    await screenshot(page, "16-camp-and-saves.png");
+    await page.keyboard.press("Escape");
     await screenshot(page, "12-approved-terrain-homestead.png");
     await hold(page, "a", 960);
     await hold(page, "s", 480); // approach approved birch at the clearing edge
@@ -79,6 +92,9 @@ async function start(page) {
     await mobile.locator("canvas").waitFor({ state: "visible", timeout: 120000 });
     await mobile.waitForTimeout(10500);
     await screenshot(mobile, "11-landscape-mobile.png");
+    await mobile.locator("canvas").click({ position: { x: 678, y: 257 } });
+    await mobile.waitForTimeout(260);
+    await screenshot(mobile, "17-market-landscape-mobile.png");
     await mobile.close();
   } finally {
     await browser.close();
