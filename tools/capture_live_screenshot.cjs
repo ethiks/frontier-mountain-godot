@@ -1,136 +1,90 @@
-// Variation A final polish (carved wood, discrete columns, controller focus): real Godot live browser captures.
+// LIVE review of the user-approved unified Frontier Mountain HUD and four-tab market.
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { chromium } = require("playwright-core");
-const URL = "https://frontier-mountain-godot.onrender.com/?review=variation-a-polished-d674c983";
+const URL = "https://frontier-mountain-godot.onrender.com/?review=unified-hud-bbf47d44";
 const OUTPUT = path.resolve("docs/screenshots");
-
-async function hold(page, key, ms) {
-  await page.keyboard.down(key);
-  await page.waitForTimeout(ms);
-  await page.keyboard.up(key);
-  await page.waitForTimeout(120);
+async function capture(page, name) {
+  const filename = path.join(OUTPUT,name);
+  await page.screenshot({path:filename});
+  const hash = crypto.createHash("sha256").update(fs.readFileSync(filename)).digest("hex").slice(0,12);
+  console.log("CAPTURE",name,hash);
 }
-async function screenshot(page, name) {
-  const dest = path.join(OUTPUT, name);
-  await page.screenshot({ path: dest });
-  const hash = crypto.createHash("sha256").update(fs.readFileSync(dest)).digest("hex").slice(0, 12);
-  console.log("CAPTURE:", name, hash);
-  return hash;
+async function load(page) {
+  await page.goto(URL,{waitUntil:"domcontentloaded",timeout:120000});
+  await page.locator("canvas").waitFor({state:"visible",timeout:120000});
+  await page.waitForTimeout(10700);
+  await page.locator("canvas").click({position:{x:600,y:350}});
 }
-async function start(page) {
-  await page.goto(URL, { waitUntil: "domcontentloaded", timeout: 120000 });
-  await page.locator("canvas").waitFor({ state: "visible", timeout: 120000 });
-  await page.waitForTimeout(11500);
-  await page.locator("canvas").click({ position: { x: 650, y: 360 } });
-}
-
-(async () => {
-  fs.mkdirSync(OUTPUT, { recursive: true });
+(async()=>{
+  fs.mkdirSync(OUTPUT,{recursive:true});
   const browser = await chromium.launch({
-    headless: true,
-    executablePath: process.env.CHROME_BIN || "/usr/bin/google-chrome",
-    args: ["--no-sandbox", "--enable-webgl", "--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
+    headless:true,
+    executablePath:process.env.CHROME_BIN||"/usr/bin/google-chrome",
+    args:["--no-sandbox","--enable-webgl","--use-gl=angle","--use-angle=swiftshader","--enable-unsafe-swiftshader"]
   });
+  const page = await browser.newPage({viewport:{width:1280,height:720},deviceScaleFactor:1});
   const errors = [];
-  const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-  page.on("pageerror", e => errors.push(e.message));
-  page.on("console", m => { if (m.type() === "error") console.error("BROWSER:", m.text().slice(0, 250)); });
+  page.on("pageerror",err=>errors.push(err.message));
+  page.on("console",msg=>{if(msg.type()==="error")console.error("BROWSER",msg.text().slice(0,300));});
   try {
-    await start(page);
-    await screenshot(page, "01-forest.png");
-    // Desktop market/shop/camp panels are inspected without altering world state.
-    await page.locator("canvas").click({ position: { x: 1096, y: 577 } });
-    await page.waitForTimeout(240);
-    await screenshot(page, "14-trader-market.png");
-    // The parchment ledger nav is 4 tabs; capture contracts, shop and supplies.
-    await page.locator("canvas").click({ position: { x: 560, y: 270 } });
+    await load(page);
+    // The initial message must have vanished after five seconds.
+    await capture(page,"30-unified-world-hud.png");
+    await page.keyboard.press("Space");
+    await page.waitForTimeout(230);
+    await capture(page,"31-world-hint-visible.png");
+    await page.waitForTimeout(5350);
+    await capture(page,"32-world-hint-faded.png");
+
+    // Open Market from keyboard: removed world quick tabs are not required.
+    await page.keyboard.press("m");
+    await page.waitForTimeout(230);
+    await capture(page,"33-unified-sell-timber.png");
+    await page.keyboard.press("e");
     await page.waitForTimeout(180);
-    await screenshot(page, "20-buyer-contracts.png");
-    await page.locator("canvas").click({ position: { x: 720, y: 270 } });
+    await capture(page,"34-unified-contracts.png");
+    await page.keyboard.press("e");
     await page.waitForTimeout(180);
-    await screenshot(page, "21-distributor-shop.png");
-    await screenshot(page, "24-variation-a-shop.png");
-    await screenshot(page, "28-variation-a-polished-shop.png");
+    await capture(page,"35-unified-equipment-shop.png");
     await page.keyboard.press("ArrowDown");
+    await page.waitForTimeout(120);
+    await capture(page,"36-unified-selected-item.png");
+    await page.keyboard.press("e");
     await page.waitForTimeout(180);
-    await screenshot(page, "25-variation-a-controller-highlight.png");
-    await page.locator("canvas").click({ position: { x: 1095, y: 120 } });
+    await capture(page,"37-unified-supplies.png");
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("p");
     await page.waitForTimeout(180);
-    await screenshot(page, "22-distributor-supplies.png");
+    await capture(page,"38-unified-camp-ledger.png");
     await page.keyboard.press("Escape");
-    await page.locator("canvas").click({ position: { x: 1209, y: 577 } });
-    await page.waitForTimeout(240);
-    await screenshot(page, "15-equipment-upgrades.png");
+    await page.keyboard.press("i");
+    await page.waitForTimeout(180);
+    await capture(page,"39-unified-gear-ledger.png");
     await page.keyboard.press("Escape");
-    await page.locator("canvas").click({ position: { x: 983, y: 577 } });
-    await page.waitForTimeout(240);
-    await screenshot(page, "16-camp-and-saves.png");
-    await page.keyboard.press("Escape");
-    await screenshot(page, "12-approved-terrain-homestead.png");
-    await hold(page, "a", 960);
-    await hold(page, "s", 480); // approach approved birch at the clearing edge
-    await screenshot(page, "02-approach-tree.png");
-    // Spruce needs three axe swings in the approved parity rules.
-    await hold(page, "Space", 110);
-    await hold(page, "Space", 110);
-    await hold(page, "Space", 110);
-    await page.waitForTimeout(320);
-    await screenshot(page, "03-tree-fall.png");
-    await page.waitForTimeout(980);
-    await hold(page, "Space", 110);
-    await page.waitForTimeout(250);
-    await screenshot(page, "04-bucked-logs.png");
-    await hold(page, "Space", 110);
-    await screenshot(page, "05-carrying.png");
-    await hold(page, "d", 1900);
-    await hold(page, "Space", 110);
-    await screenshot(page, "06-loading-yard.png");
-    await hold(page, "d", 3200);
-    await screenshot(page, "09-east-woods.png");
-    await screenshot(page, "13-approved-terrain-east-forest.png");
-    await hold(page, "w", 3100);
-    await screenshot(page, "10-north-woods.png");
-    await page.locator("canvas").click({ position: { x: 1093, y: 44 } });
-    await screenshot(page, "07-audio-mixer.png");
-    await page.locator("canvas").click({ position: { x: 1204, y: 44 } });
-    await page.waitForTimeout(450);
-    console.log("FULLSCREEN_FROM_USER_CLICK:", await page.evaluate(() => Boolean(document.fullscreenElement)));
-    await screenshot(page, "08-fullscreen.png");
-    if (errors.length) {
-      console.error("PAGE ERRORS:", errors);
-      process.exitCode = 1;
-    }
-    const mobile = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
-    await mobile.goto(URL, { waitUntil: "domcontentloaded", timeout: 120000 });
-    await mobile.locator("canvas").waitFor({ state: "visible", timeout: 120000 });
-    await mobile.waitForTimeout(10500);
-    await screenshot(mobile, "11-landscape-mobile.png");
-    // Approved full-size stall and art-driven landscape HUD: screenshot is
-    // captured from the real mobile WebGL canvas, not the approval mockup.
-    await screenshot(mobile, "23-approved-ui-mobile.png");
-    // Real touch gesture on the enlarged mobile MARKET tab.
-    await mobile.locator("canvas").tap({ position: { x: 686, y: 282 } });
-    await mobile.waitForTimeout(300);
-    await screenshot(mobile, "17-market-landscape-mobile.png");
-    // Also verify keyboard/controller-equivalent menu path on a mobile viewport.
+
+    // A true phone-landscape browser, not a resized mockup.
+    const mobile = await browser.newPage({viewport:{width:844,height:390},deviceScaleFactor:1,isMobile:true,hasTouch:true});
+    mobile.on("pageerror",err=>errors.push("MOBILE "+err.message));
+    await load(mobile);
+    await capture(mobile,"40-unified-mobile-world.png");
     await mobile.keyboard.press("m");
-    await mobile.waitForTimeout(180);
-    await screenshot(mobile, "18-market-mobile-menu.png");
+    await mobile.waitForTimeout(200);
+    await capture(mobile,"41-unified-mobile-sell.png");
     await mobile.keyboard.press("e");
+    await mobile.waitForTimeout(160);
+    await capture(mobile,"42-unified-mobile-contracts.png");
     await mobile.keyboard.press("e");
-    await mobile.waitForTimeout(270);
-    await screenshot(mobile, "26-variation-a-mobile-shop.png");
-    await screenshot(mobile, "29-variation-a-polished-mobile.png");
-    await mobile.keyboard.press("ArrowDown");
-    await screenshot(mobile, "27-variation-a-mobile-focus.png");
-    await mobile.keyboard.press("Escape");
-    await mobile.keyboard.press("p");
-    await mobile.waitForTimeout(180);
-    await screenshot(mobile, "19-camp-mobile-menu.png");
+    await mobile.waitForTimeout(160);
+    await capture(mobile,"43-unified-mobile-shop.png");
+    await mobile.keyboard.press("e");
+    await mobile.waitForTimeout(160);
+    await capture(mobile,"44-unified-mobile-supplies.png");
     await mobile.close();
-  } finally {
-    await browser.close();
-  }
-})().catch(e => { console.error(e); process.exit(1); });
+    if(errors.length) {
+      console.error("WEBGL PAGE ERRORS",errors);
+      process.exitCode=1;
+    }
+  } finally {await browser.close();}
+})().catch(e=>{console.error(e);process.exit(1)});
