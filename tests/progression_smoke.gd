@@ -29,7 +29,7 @@ func _run() -> void:
     if not _check(game.get_node_or_null("Daylight") != null and game.get_node_or_null("Prop_MarketDistributor") != null, "Daylight tint and newly scaled approved market distributor present"):
         quit(1)
         return
-    if not _check(ui.camp_button != null and ui.market_button != null and ui.gear_button != null and ui.save_button != null, "Camp, market, gear and save accessible from single HUD"):
+    if not _check(not ui.camp_button.visible and not ui.market_button.visible and not ui.gear_button.visible and ui.save_button.visible, "Permanent world tabs removed, floating save utility retained"):
         quit(1)
         return
     if not _check(ui.call("_calculate_ui_scale", Vector2(1280.0, 720.0), 390.0) >= 1.5, "Phone landscape dynamically enlarges UI and tap targets"):
@@ -37,7 +37,7 @@ func _run() -> void:
         return
     ui.resize_layout(Vector2(844.0, 390.0))
     ui.open_menu("MARKET")
-    if not _check(ui.menu_header_art.visible and not ui.ledger_art.visible and ui.menu_scroll.size.y >= 170.0, "Mobile market uses compact wood header with useful parchment scrolling space"):
+    if not _check(ui.shop_a.visible and not ui.menu_panel.visible and ui.shop_a.page == "sell", "Mobile sell tab uses the same unified market split-view as shop"):
         quit(1)
         return
     ui.close_menu()
@@ -45,11 +45,11 @@ func _run() -> void:
     if not _check(ui.action_button.position.x + ui.action_button.size.x <= 844.0 and ui.action_button.position.y + ui.action_button.size.y <= 390.0, "Landscape phone action button stays within 844x390 viewport"):
         quit(1)
         return
-    if not _check(ui.camp_button.position.x > 0.0 and ui.gear_button.position.x + ui.gear_button.size.x <= 844.0, "All three mobile quick tabs remain onscreen"):
+    if not _check(not ui.camp_button.visible and not ui.gear_button.visible and ui.fullscreen_button.position.x + ui.fullscreen_button.size.x <= 844.0, "World tabs hidden; floating utility controls stay within mobile viewport"):
         quit(1)
         return
     ui.open_menu("MARKET")
-    if not _check(ui.is_open and ui.menu_rows.get_child_count() >= 7, "Market, prices and contract ledger opens from mobile"):
+    if not _check(ui.is_open and ui.shop_a.visible and ui.shop_a.filtered_items.size() == 7, "Market and all seven timber grades render in unified mobile ledger"):
         quit(1)
         return
     ui.open_menu("GEAR")
