@@ -367,10 +367,10 @@ func _input(event: InputEvent) -> void:
         return
     if event is InputEventKey and event.pressed and not event.echo:
         audio_engine.begin_audio()
-        if event.keycode == KEY_ESCAPE and ui != null and ui.is_open:
-            ui.close_menu()
+        if ui != null and ui.is_open and ui.handle_keyboard(event.keycode):
             get_viewport().set_input_as_handled()
-        elif event.keycode == KEY_M and ui != null:
+            return
+        if event.keycode == KEY_M and ui != null:
             ui.open_menu("MARKET")
         elif event.keycode == KEY_I and ui != null:
             ui.open_menu("GEAR")
@@ -388,14 +388,18 @@ func _input(event: InputEvent) -> void:
         audio_engine.begin_audio()
     elif event is InputEventJoypadButton and event.pressed:
         audio_engine.begin_audio()
+        if ui != null and ui.is_open and ui.handle_controller_button(event.button_index):
+            get_viewport().set_input_as_handled()
+            return
         if event.button_index == JOY_BUTTON_START:
             _toggle_fullscreen()
-        elif event.button_index == JOY_BUTTON_B and ui != null and ui.is_open:
-            ui.close_menu()
         elif event.button_index == JOY_BUTTON_Y and ui != null:
             ui.open_menu("MARKET")
         elif event.button_index == JOY_BUTTON_X and ui != null:
             ui.open_menu("GEAR")
+    elif event is InputEventJoypadMotion:
+        if ui != null and ui.is_open and ui.handle_controller_axis(event.axis, event.axis_value):
+            get_viewport().set_input_as_handled()
 
 func _process(delta: float) -> void:
     if ui != null and ui.is_open:
