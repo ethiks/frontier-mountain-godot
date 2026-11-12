@@ -183,14 +183,15 @@ func refill_fuel(game: Node) -> bool:
     if axe_level < 3:
         game.call("_say", "Fuel is only needed for the chainsaw.")
         return false
-    if fuel >= FUEL_CAPACITY:
+    var max_fuel: float = game.distributor.fuel_max() if game.get("distributor") != null else FUEL_CAPACITY
+    if fuel >= max_fuel:
         game.call("_say", "Chainsaw fuel tank is already full.")
         return false
     if int(game.get("cash")) < FUEL_REFILL_COST:
         game.call("_say", "Refuelling costs $%d." % FUEL_REFILL_COST)
         return false
     game.set("cash", int(game.get("cash")) - FUEL_REFILL_COST)
-    fuel = FUEL_CAPACITY
+    fuel = max_fuel
     game.call("_say", "Chainsaw refuelled.")
     save_game(game)
     return true
