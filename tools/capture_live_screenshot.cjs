@@ -1,4 +1,4 @@
-// Frontier Mountain phases 2-4: final phone-scale touch and desktop menus from deployed Godot browser.
+// Approved carved-wood UI / legacy distributor scene visual QA. Real Render Godot canvas.
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
@@ -44,6 +44,16 @@ async function start(page) {
     await page.locator("canvas").click({ position: { x: 1096, y: 577 } });
     await page.waitForTimeout(240);
     await screenshot(page, "14-trader-market.png");
+    // The parchment ledger nav is 4 tabs; capture contracts, shop and supplies.
+    await page.locator("canvas").click({ position: { x: 541, y: 318 } });
+    await page.waitForTimeout(180);
+    await screenshot(page, "20-buyer-contracts.png");
+    await page.locator("canvas").click({ position: { x: 665, y: 318 } });
+    await page.waitForTimeout(180);
+    await screenshot(page, "21-distributor-shop.png");
+    await page.locator("canvas").click({ position: { x: 780, y: 318 } });
+    await page.waitForTimeout(180);
+    await screenshot(page, "22-distributor-supplies.png");
     await page.keyboard.press("Escape");
     await page.locator("canvas").click({ position: { x: 1209, y: 577 } });
     await page.waitForTimeout(240);
@@ -92,6 +102,9 @@ async function start(page) {
     await mobile.locator("canvas").waitFor({ state: "visible", timeout: 120000 });
     await mobile.waitForTimeout(10500);
     await screenshot(mobile, "11-landscape-mobile.png");
+    // Approved full-size stall and art-driven landscape HUD: screenshot is
+    // captured from the real mobile WebGL canvas, not the approval mockup.
+    await screenshot(mobile, "23-approved-ui-mobile.png");
     // Real touch gesture on the enlarged mobile MARKET tab.
     await mobile.locator("canvas").tap({ position: { x: 686, y: 282 } });
     await mobile.waitForTimeout(300);
