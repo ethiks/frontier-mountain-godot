@@ -655,25 +655,25 @@ func _update_hud() -> void:
     if action_button == null:
         return
     if player_pos.distance_to(YARD_POSITION) < 110.0 and not carried.is_empty():
-        ui.action_hint.text = "UNLOAD"
+        action_button.text = "UNLOAD"
     elif player_pos.distance_to(CABIN_ENTRY) < 78.0:
-        ui.action_hint.text = "CAMP"
+        action_button.text = "CAMP"
     elif player_pos.distance_to(DISTRIBUTOR_COUNTER + Vector2(0.0, 45.0)) < 140.0:
-        ui.action_hint.text = "TRADE"
+        action_button.text = "TRADE"
     elif player_pos.distance_to(YARD_POSITION) < 115.0:
-        ui.action_hint.text = "MARKET"
+        action_button.text = "MARKET"
     elif _nearest_log_index() >= 0:
-        ui.action_hint.text = "PICK UP" if carried.size() < progression.capacity() else "FULL LOAD"
+        action_button.text = "PICK UP" if carried.size() < progression.capacity() else "FULL LOAD"
     else:
         var tree := _nearest_tree()
         if tree.is_empty():
-            ui.action_hint.text = "ACTION"
+            action_button.text = "ACTION"
         elif int(tree["state"]) == 2:
-            ui.action_hint.text = "BUCK"
+            action_button.text = "BUCK"
         elif int(tree["state"]) == 1:
-            ui.action_hint.text = "TIMBER!"
+            action_button.text = "TIMBER!"
         else:
-            ui.action_hint.text = "CHOP"
+            action_button.text = "CHOP"
 
 func _rebuild_tree_sprites() -> void:
     # Deserialize data, then rebuild the world view without duplicating sprites.
