@@ -113,6 +113,7 @@ func sell_selected(game: Node, selection: Array) -> Dictionary:
     lifetime_revenue += income
     game.progression.total_earned += income
     game.progression.save_game(game)
+    game.trade_sfx.play_sale(game.audio_engine)
     game.call("_say", "Sold %d timber units for $%d." % [count, income])
     return {"count":count,"income":income}
 
@@ -194,6 +195,7 @@ func deliver_contract(game: Node, offer_id: String) -> bool:
         reputation += 2
         active_contracts.remove_at(i)
         game.progression.save_game(game)
+        game.trade_sfx.play_sale(game.audio_engine)
         game.call("_say", "Buyer order completed! +$%d, reputation +2." % payout)
         return true
     return false
@@ -234,6 +236,7 @@ func buy_shop_item(game: Node, shop_id: String) -> bool:
     if shop_id == "sharp" or shop_id == "steel" or shop_id == "chainsaw":
         game.progression.condition = game.progression.AXE_CONDITION[game.progression.axe_level]
     game.progression.save_game(game)
+    game.trade_sfx.play_purchase(game.audio_engine)
     game.call("_say", "Purchased %s for $%d." % [item["name"],cost])
     return true
 
@@ -260,6 +263,7 @@ func buy_supply(game: Node, supply_id: String) -> bool:
         "fuel":
             game.progression.fuel = minf(fuel_max(), game.progression.fuel + 60.0)
     game.progression.save_game(game)
+    game.trade_sfx.play_purchase(game.audio_engine)
     game.call("_say", "Distributor supplied %s." % item["name"])
     return true
 
@@ -272,6 +276,7 @@ func field_repair(game: Node) -> bool:
     repair_parts -= 1
     game.progression.condition = game.progression.AXE_CONDITION[game.progression.axe_level]
     game.progression.save_game(game)
+    game.trade_sfx.play_purchase(game.audio_engine)
     game.call("_say", "Field repair complete: one repair part used.")
     return true
 
