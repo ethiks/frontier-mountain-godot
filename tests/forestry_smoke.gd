@@ -65,10 +65,31 @@ func _run() -> void:
 		quit(1)
 		return
 	var terrain: Node2D = game.get_node("ForestTerrain")
-	if not _check(terrain.call("_surface_type", Vector2(1662, 1313), 138, 109) == 4, "Log landing uses the new pixel-grid compacted earth surface"):
+	var ground_map: TileMapLayer = terrain.get_node("BaseGround")
+	var path_map: TileMapLayer = terrain.get_node("ConnectedForestPaths")
+	var yard_map: TileMapLayer = terrain.get_node("LumberLoadingZone")
+	var detail_map: TileMapLayer = terrain.get_node("GroundDetailOverlays")
+	var transition_map: TileMapLayer = terrain.get_node("GroundTransitions")
+	if not _check(ground_map != null and ground_map.get_used_cells().size() == 96 * 76, "Approved 32px base terrain fills the original 96x76 world"):
 		quit(1)
 		return
-	if not _check(terrain.call("_surface_type", Vector2(1565, 1116), 130, 93) == 2, "Cabin trail uses the same pixel-art ground material"):
+	var atlas_source: TileSetAtlasSource = ground_map.tile_set.get_source(0)
+	if not _check(atlas_source != null and atlas_source.get_tiles_count() == 120, "All 120 approved terrain atlas tiles imported into the Godot TileSet"):
+		quit(1)
+		return
+	if not _check(path_map.get_used_cells().size() > 20 and yard_map.get_used_cells().size() > 12, "Connected atlas paths reach the compacted timber loading zone"):
+		quit(1)
+		return
+	if not _check(detail_map.get_used_cells().size() > 130 and transition_map.get_used_cells().size() > 20, "Seeded decorative overlays and biome transitions populate the world"):
+		quit(1)
+		return
+	if not _check(terrain.get("biome_counts").size() >= 5, "Regional variation includes at least five distinct terrain biomes"):
+		quit(1)
+		return
+	if not _check(terrain.get_node_or_null("ApprovedYardSign") != null and terrain.get_node_or_null("LoadingRailEast") != null, "Approved loading-zone artwork appears without decorative logs"):
+		quit(1)
+		return
+	if not _check(yard_map.get_cell_source_id(Vector2i(51, 41)) >= 0, "Player delivery location lies on the matching yard tilemap"):
 		quit(1)
 		return
 	var following_camera: Camera2D = game.get("camera")
