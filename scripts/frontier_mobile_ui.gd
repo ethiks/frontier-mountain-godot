@@ -291,7 +291,7 @@ func refresh_menu() -> void:
         _paragraph("DAILY CONTRACT", true)
         _paragraph("Deliver %d %s logs  •  bonus $%d\n%s" % [progress.contract_goal, progress.SPECIES[progress.contract_species], progress.contract_reward, contract_status])
         var distance: float = game.get("player_pos").distance_to(game.YARD_POSITION)
-        var enabled := distance < 110.0 and game.get("carried").size() > 0
+        var enabled: bool = distance < 110.0 and game.get("carried").size() > 0
         _menu_button("SELL CARRIED LOGS  ·  at loading zone", _sell_now, enabled)
         _paragraph("Prices change each morning. Contract bonuses pay once when the required species are delivered.")
         _paragraph("Lifetime: %d logs sold  •  $%d earned" % [progress.total_delivered, progress.total_earned])
