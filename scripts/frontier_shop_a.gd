@@ -417,11 +417,13 @@ func _build_rows() -> void:
         if ITEM_ICONS.has(id):
             var icon := TextureRect.new()
             icon.name = "ApprovedThumbnail_" + id
+            # Set ignore-intrinsic-size BEFORE assigning the 96px texture;
+            # otherwise Godot can enforce its 96px minimum over a 66px slot.
+            icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
             icon.texture = _icon_texture(id)
             icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
             icon.position = Vector2(4.0, 4.0)
             icon.size = Vector2(66.0, 48.0 if not compact else 40.0)
-            icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
             icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
             icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
             btn.add_child(icon)
