@@ -7,6 +7,9 @@ const CHUNK_SIZE := 384.0
 const HOMESTEAD_ORIGIN := Vector2(860.0, 760.0)
 const CABIN_ENTRY := HOMESTEAD_ORIGIN + Vector2(707.0, 352.0)
 const SHED_ENTRY := HOMESTEAD_ORIGIN + Vector2(962.0, 392.0)
+const DISTRIBUTOR_POSITION := Vector2(1900.0, 1364.0)
+const DISTRIBUTOR_COUNTER := Vector2(1900.0, 1366.0)
+const DISTRIBUTOR_WIDTH := 408.0
 const FRAME_W := 84
 const FRAME_H := 92
 const PLAYER_SPEED := 225.0
@@ -71,6 +74,7 @@ var action_button: Button
 var world_time := 0.0
 var audio_engine
 var progression
+var distributor
 var ui
 var world_tint: CanvasModulate
 var mixer_panel: Panel
@@ -91,6 +95,9 @@ func _ready() -> void:
     progression = preload("res://scripts/frontier_progression.gd").new()
     progression.name = "Progression"
     add_child(progression)
+    distributor = preload("res://scripts/frontier_distributor.gd").new()
+    distributor.name = "Distributor"
+    add_child(distributor)
     audio_engine = preload("res://scripts/legacy_audio.gd").new()
     audio_engine.name = "LegacyAudio"
     add_child(audio_engine)
@@ -118,7 +125,24 @@ func _setup_background() -> void:
     _place_prop("cabin-day", HOMESTEAD_ORIGIN + Vector2(650.0, 326.0), 340.0, 1)
     _place_prop("shed", HOMESTEAD_ORIGIN + Vector2(968.0, 365.0), 206.0, 1)
     # This trader sprite belongs to the original, user-approved core pack.
-    _place_prop("trader-open", HOMESTEAD_ORIGIN + Vector2(861.0, 521.0), 134.0, 1)
+    _place_distributor()
+
+func _place_distributor() -> void:
+    # Approved distributor sprite: the clerk's visible body is now ~52 px,
+    # comparable to the 52px lumberjack rather than the former 134px-wide stall.
+    var tex := load("res://assets/ui/approved_stall.webp") as Texture2D
+    if tex == null:
+        push_error("Missing approved distributor stall art")
+        return
+    var sprite := Sprite2D.new()
+    sprite.name = "Prop_MarketDistributor"
+    sprite.texture = tex
+    sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    var world_scale := DISTRIBUTOR_WIDTH / float(tex.get_width())
+    sprite.scale = Vector2.ONE * world_scale
+    sprite.position = DISTRIBUTOR_POSITION - Vector2(0, float(tex.get_height()) * world_scale * 0.5)
+    sprite.z_index = int(DISTRIBUTOR_POSITION.y / 10.0)
+    add_child(sprite)
 
 func _place_prop(name: String, foot: Vector2, width: float, depth: int) -> void:
     var tex: Texture2D = _texture(name)
@@ -377,8 +401,12 @@ func _process(delta: float) -> void:
         return
     world_time += delta
     progression.tick(delta, self)
+    distributor.tick(delta, self)
     if world_tint != null:
-        world_tint.color = progression.ambient_color()
+        var shade: Color = progression.ambient_color()
+        if distributor.is_owned("lantern"):
+            shade = shade.lerp(Color.WHITE, 0.20)
+        world_tint.color = shade
     _move_player(delta)
     _update_camera(delta)
     _animate_trees(delta)
@@ -423,7 +451,7 @@ func _move_player(delta: float) -> void:
     movement = movement.limit_length(1.0)
     is_moving = movement.length() > 0.12
     if is_moving:
-        _move_with_collisions(movement * PLAYER_SPEED * delta)
+        _move_with_collisions(movement * PLAYER_SPEED * distributor.movement_multiplier() * delta)
         facing = posmod(int(round((atan2(movement.y, movement.x) + PI / 2.0) / (PI / 4.0))), 8)
         walking_clock += delta * 7.0
     else:
@@ -448,6 +476,11 @@ func _collides_at(candidate: Vector2) -> bool:
     if CABIN_BLOCKER.grow(PLAYER_COLLISION_RADIUS).has_point(local_pos):
         return true
     if SHED_BLOCKER.grow(PLAYER_COLLISION_RADIUS).has_point(local_pos):
+        return true
+    # The timber-market kiosk counter has a solid footprint, but the front
+    # interaction space remains clear for the lumberjack.
+    var kiosk_base := Rect2(DISTRIBUTOR_POSITION + Vector2(-188, -70), Vector2(376, 63))
+    if kiosk_base.grow(PLAYER_COLLISION_RADIUS * 0.55).has_point(candidate):
         return true
     for i in _nearby_tree_ids(candidate):
         var tree: Dictionary = trees[i]
@@ -518,12 +551,14 @@ func _nearest_log_index() -> int:
 
 func _interact() -> void:
     if player_pos.distance_to(YARD_POSITION) < 110.0 and not carried.is_empty():
-        var receipt: Dictionary = progression.sell_logs(self, carried)
+        var quantity: int = distributor.deposit(self, carried)
         audio_engine.play_fx("log-drop", 0.7)
-        carried.clear()
-        progression.save_game(self) # after clearing inventory: cannot sell the same logs twice
-        var extra := " + $%d contract!" % int(receipt["bonus"]) if int(receipt["bonus"]) > 0 else ""
-        _say("Sold %d logs for $%d%s" % [int(receipt["count"]), int(receipt["income"]), extra])
+        progression.save_game(self)
+        _say("Unloaded %d logs into yard stock. Open MARKET to sell or fulfill orders." % quantity)
+        return
+    if player_pos.distance_to(DISTRIBUTOR_COUNTER + Vector2(0.0, 45.0)) < 140.0:
+        ui.open_menu("MARKET")
+        _say("Elias the distributor: buyer orders, stock, supplies and equipment.")
         return
     if player_pos.distance_to(CABIN_ENTRY) < 78.0:
         ui.open_menu("CAMP")
@@ -622,11 +657,13 @@ func _update_hud() -> void:
     if action_button == null:
         return
     if player_pos.distance_to(YARD_POSITION) < 110.0 and not carried.is_empty():
-        action_button.text = "SELL LOGS"
+        action_button.text = "UNLOAD"
     elif player_pos.distance_to(CABIN_ENTRY) < 78.0:
         action_button.text = "CAMP"
     elif player_pos.distance_to(SHED_ENTRY) < 78.0:
         action_button.text = "SHOP"
+    elif player_pos.distance_to(DISTRIBUTOR_COUNTER + Vector2(0.0, 45.0)) < 140.0:
+        action_button.text = "TRADE"
     elif player_pos.distance_to(YARD_POSITION) < 115.0:
         action_button.text = "MARKET"
     elif _nearest_log_index() >= 0:
