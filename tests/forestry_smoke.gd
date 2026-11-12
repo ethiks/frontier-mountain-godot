@@ -54,7 +54,7 @@ func _run() -> void:
 		quit(1)
 		return
 	var stall_sprite: Sprite2D = game.get_node("Prop_MarketDistributor")
-	if not _check(stall_sprite.position.x >= 1800.0 and stall_sprite.position.x <= 1860.0 and absf(stall_sprite.scale.x - 1.0) < 0.2, "Distributor occupies old toolshed clearing at logger-matched scale"):
+	if not _check(stall_sprite.position.x >= 1800.0 and stall_sprite.position.x <= 1860.0 and absf(stall_sprite.texture.get_width() * stall_sprite.scale.x - 285.6) < 1.0, "Market remains at toolshed clearing after a thirty percent scale reduction"):
 		quit(1)
 		return
 	if not _check(game.call("_collides_at", Vector2(1140, 1386)), "Standing tree trunk blocks player"):
