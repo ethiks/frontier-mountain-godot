@@ -518,32 +518,38 @@ func _nearest_log_index() -> int:
 
 func _interact() -> void:
     if player_pos.distance_to(YARD_POSITION) < 110.0 and not carried.is_empty():
-        var income := 0
-        for species in carried:
-            income += VALUES[species]
-        var total := carried.size()
-        cash += income
+        var receipt: Dictionary = progression.sell_logs(self, carried)
         audio_engine.play_fx("log-drop", 0.7)
         carried.clear()
-        _say("Delivered %d full-size logs. Earned $%d." % [total, income])
+        progression.save_game(self) # after clearing inventory: cannot sell the same logs twice
+        var extra := " + $%d contract!" % int(receipt["bonus"]) if int(receipt["bonus"]) > 0 else ""
+        _say("Sold %d logs for $%d%s" % [int(receipt["count"]), int(receipt["income"]), extra])
         return
-    if player_pos.distance_to(CABIN_ENTRY) < 68.0:
-        _say("CABIN ENTRANCE: rest and save will unlock in the next milestone.")
+    if player_pos.distance_to(CABIN_ENTRY) < 78.0:
+        ui.open_menu("CAMP")
+        _say("Cabin: save, load or rest until tomorrow.")
         return
-    if player_pos.distance_to(SHED_ENTRY) < 67.0:
-        _say("TOOL SHED: equipment access will unlock in the next milestone.")
+    if player_pos.distance_to(SHED_ENTRY) < 78.0:
+        ui.open_menu("GEAR")
+        _say("Tool shed: upgrade, repair and equip your tools.")
+        return
+    if player_pos.distance_to(YARD_POSITION) < 115.0:
+        ui.open_menu("MARKET")
+        _say("Timber market: prices change daily. Contracts pay once.")
         return
     var index := _nearest_log_index()
-    if index >= 0 and carried.size() < LOG_CAPACITY:
+    if index >= 0 and carried.size() < progression.capacity():
         var item: Dictionary = ground_logs[index]
         var sprite: Sprite2D = item["sprite"]
-        sprite.queue_free()
+        if is_instance_valid(sprite):
+            sprite.queue_free()
         carried.append(int(item["type"]))
         audio_engine.play_fx("log-lift", 0.72)
         ground_logs.remove_at(index)
-        _say("Carrying %s timber (%d/%d)." % [TYPES[carried.back()], carried.size(), LOG_CAPACITY])
+        _say("Carrying %s timber (%d/%d)." % [TYPES[carried.back()], carried.size(), progression.capacity()])
+        progression.save_game(self)
         return
-    if index >= 0 and carried.size() == LOG_CAPACITY:
+    if index >= 0 and carried.size() >= progression.capacity():
         _say("Load full! Take the logs to the marked lumberyard.")
         return
     var tree := _nearest_tree()
@@ -560,8 +566,12 @@ func _interact() -> void:
     var direction: Vector2 = tree["pos"] - player_pos
     if direction.length() > 2.0:
         facing = posmod(int(round((atan2(direction.y, direction.x) + PI / 2.0) / (PI / 4.0))), 8)
-    tree["hp"] = int(tree["hp"]) - 1
-    audio_engine.play_fx("axe-chop", 0.95)
+    if not progression.can_chop():
+        _say("Tool needs repair%s. Open GEAR." % (" and fuel" if progression.axe_level == 3 and progression.fuel < 1.0 else ""))
+        return
+    tree["hp"] = maxi(0, int(tree["hp"]) - progression.chop_power())
+    progression.expend_chop()
+    audio_engine.play_fx("chainsaw-rev" if progression.axe_level == 3 else "axe-chop", 0.93)
     swing_kind = "chop"
     swing_clock = 0.33
     if int(tree["hp"]) <= 0:
@@ -571,6 +581,7 @@ func _interact() -> void:
         _say("TIMBER! %s is falling." % TYPES[species].capitalize())
     else:
         _say("%s: %d more chops." % [TYPES[species].capitalize(), int(tree["hp"])])
+    progression.save_game(self)
 
 func _buck_tree(tree: Dictionary) -> void:
     var species: int = int(tree["type"])
@@ -587,6 +598,7 @@ func _buck_tree(tree: Dictionary) -> void:
     swing_kind = "buck"
     swing_clock = 0.38
     _say("Bucked %s into %d scaled logs." % [TYPES[species], YIELDS[species]])
+    progression.save_game(self)
 
 func _spawn_log(pos: Vector2, species: int) -> void:
     var tex := _texture("loose-%d" % species)
@@ -604,23 +616,21 @@ func _spawn_log(pos: Vector2, species: int) -> void:
     ground_logs.append({"pos": pos, "type": species, "sprite": sprite})
 
 func _update_hud() -> void:
-    if hud == null:
+    if ui == null:
         return
-    hud.text = "FRONTIER MOUNTAIN   |   $%d   |   LOGS %d/%d   |   TREES %d" % [cash, carried.size(), LOG_CAPACITY, _standing_count()]
-    if message.text != message_text:
-        message.text = message_text
-    if navigation_label != null:
-        navigation_label.text = "WILDERNESS 96 x 76  |  HOME %d tiles  |  CHUNKS %d" % [int(player_pos.distance_to(YARD_POSITION) / 32.0), streamed_active_chunks]
-    if sound_button != null:
-        sound_button.text = "SOUND ON" if audio_engine.enabled and audio_engine.unlocked else ("SOUND OFF" if not audio_engine.enabled else "SOUND")
+    ui.update_header()
+    if action_button == null:
+        return
     if player_pos.distance_to(YARD_POSITION) < 110.0 and not carried.is_empty():
         action_button.text = "SELL LOGS"
-    elif player_pos.distance_to(CABIN_ENTRY) < 68.0:
-        action_button.text = "CABIN"
-    elif player_pos.distance_to(SHED_ENTRY) < 67.0:
-        action_button.text = "TOOL SHED"
+    elif player_pos.distance_to(CABIN_ENTRY) < 78.0:
+        action_button.text = "CAMP"
+    elif player_pos.distance_to(SHED_ENTRY) < 78.0:
+        action_button.text = "SHOP"
+    elif player_pos.distance_to(YARD_POSITION) < 115.0:
+        action_button.text = "MARKET"
     elif _nearest_log_index() >= 0:
-        action_button.text = "PICK UP" if carried.size() < LOG_CAPACITY else "FULL LOAD"
+        action_button.text = "PICK UP" if carried.size() < progression.capacity() else "FULL LOAD"
     else:
         var tree := _nearest_tree()
         if tree.is_empty():
@@ -631,6 +641,18 @@ func _update_hud() -> void:
             action_button.text = "TIMBER!"
         else:
             action_button.text = "CHOP"
+
+func _rebuild_tree_sprites() -> void:
+    # Deserialize data, then rebuild the world view without duplicating sprites.
+    for tree in trees:
+        var old_sprite: Sprite2D = tree["sprite"]
+        if is_instance_valid(old_sprite):
+            old_sprite.queue_free()
+        tree["sprite"] = null
+    active_chunks.clear()
+    _update_visible_chunks(true)
+    if camera != null:
+        camera.position = player_pos
 
 func _standing_count() -> int:
     var count := 0
