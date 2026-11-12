@@ -10,7 +10,7 @@ const CREAM := Color("#f2e6c6")
 const MUTED := Color("#c7cbb3")
 const DANGER := Color("#a26052")
 
-var game: Node
+var game
 var root: Control
 var top_panel: ColorRect
 var hud: Label
@@ -61,7 +61,7 @@ func build(p_game: Node) -> void:
     root.add_child(joystick)
     action_button = _button(root, "CHOP", 21, true)
     action_button.name = "PrimaryAction"
-    action_button.pressed.connect(func(): if not is_open: game.call("_interact"))
+    action_button.pressed.connect(_primary_action)
     camp_button = _button(root, "CAMP", 15)
     camp_button.name = "CampTab"
     camp_button.pressed.connect(func(): open_menu("CAMP"))
@@ -257,6 +257,10 @@ func open_menu(which: String) -> void:
     menu_panel.visible = true
     mixer_panel.visible = false
     refresh_menu()
+
+func _primary_action() -> void:
+    if not is_open:
+        game.call("_interact")
 
 func close_menu() -> void:
     is_open = false
