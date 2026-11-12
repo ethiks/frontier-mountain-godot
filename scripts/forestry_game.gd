@@ -70,6 +70,9 @@ var message: Label
 var action_button: Button
 var world_time := 0.0
 var audio_engine
+var progression
+var ui
+var world_tint: CanvasModulate
 var mixer_panel: Panel
 var music_slider: HSlider
 var effects_slider: HSlider
@@ -85,13 +88,21 @@ func _texture(name: String) -> Texture2D:
     return texture_cache[name]
 
 func _ready() -> void:
+    progression = preload("res://scripts/frontier_progression.gd").new()
+    progression.name = "Progression"
+    add_child(progression)
     audio_engine = preload("res://scripts/legacy_audio.gd").new()
     audio_engine.name = "LegacyAudio"
     add_child(audio_engine)
     _setup_background()
     _setup_trees()
     _setup_player()
+    world_tint = CanvasModulate.new()
+    world_tint.name = "Daylight"
+    add_child(world_tint)
     _setup_ui()
+    if progression.load_game(self):
+        _say("Welcome back. Your saved forest has been restored.")
     _update_visible_chunks(true)
     _update_hud()
     get_viewport().size_changed.connect(_on_viewport_resized)
@@ -106,6 +117,8 @@ func _setup_background() -> void:
     # Preserve the existing independently sized cabin and single tool shed.
     _place_prop("cabin-day", HOMESTEAD_ORIGIN + Vector2(650.0, 326.0), 340.0, 1)
     _place_prop("shed", HOMESTEAD_ORIGIN + Vector2(968.0, 365.0), 206.0, 1)
+    # This trader sprite belongs to the original, user-approved core pack.
+    _place_prop("trader-open", HOMESTEAD_ORIGIN + Vector2(861.0, 521.0), 134.0, 1)
 
 func _place_prop(name: String, foot: Vector2, width: float, depth: int) -> void:
     var tex: Texture2D = _texture(name)
@@ -277,80 +290,24 @@ func _label(parent: Node, txt: String, pos: Vector2, fontsize: int, color: Color
     return label
 
 func _setup_ui() -> void:
-    var layer := CanvasLayer.new()
-    add_child(layer)
-    top_panel = ColorRect.new()
-    top_panel.color = Color(0.05, 0.10, 0.08, 0.82)
-    top_panel.size = Vector2(1280, 116)
-    top_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    layer.add_child(top_panel)
-    hud = _label(layer, "FRONTIER MOUNTAIN", Vector2(24, 12), 25, Color("#f8e5b1"))
-    instructions = _label(layer, "Walk: joystick / WASD / controller    Act: E / SPACE / controller A", Vector2(26, 49), 15, Color("#e9e8ce"))
-    message = _label(layer, message_text, Vector2(26, 77), 17, Color("#ffdc96"))
-    navigation_label = _label(layer, "FOREST / HOME", Vector2(26, 123), 15, Color("#efe0ba"))
-    joystick = preload("res://scripts/virtual_joystick.gd").new()
-    joystick.position = Vector2(24, 516)
-    layer.add_child(joystick)
-    action_button = Button.new()
-    action_button.text = "CHOP"
-    action_button.position = Vector2(1062, 576)
-    action_button.size = Vector2(176, 86)
-    action_button.add_theme_font_size_override("font_size", 21)
-    action_button.pressed.connect(_interact)
-    layer.add_child(action_button)
-    sound_button = Button.new()
-    sound_button.text = "SOUND"
-    sound_button.position = Vector2(950, 20)
-    sound_button.size = Vector2(103, 51)
-    sound_button.add_theme_font_size_override("font_size", 15)
-    sound_button.pressed.connect(_toggle_audio)
-    layer.add_child(sound_button)
-    mixer_button = Button.new()
-    mixer_button.text = "MIX"
-    mixer_button.position = Vector2(1063, 20)
-    mixer_button.size = Vector2(75, 51)
-    mixer_button.add_theme_font_size_override("font_size", 15)
-    mixer_button.pressed.connect(_toggle_mixer)
-    layer.add_child(mixer_button)
-    fullscreen_button = Button.new()
-    fullscreen_button.text = "FULLSCREEN"
-    fullscreen_button.position = Vector2(1148, 20)
-    fullscreen_button.size = Vector2(114, 51)
-    fullscreen_button.add_theme_font_size_override("font_size", 13)
-    fullscreen_button.pressed.connect(_toggle_fullscreen)
-    layer.add_child(fullscreen_button)
-    mixer_panel = Panel.new()
-    mixer_panel.position = Vector2(878, 117)
-    mixer_panel.size = Vector2(378, 222)
-    mixer_panel.visible = false
-    layer.add_child(mixer_panel)
-    _label(mixer_panel, "AUDIO / FRONTIER MOUNTAIN", Vector2(17, 13), 16, Color("#e8d4a6"))
-    _label(mixer_panel, "Music", Vector2(18, 50), 15, Color.WHITE)
-    music_slider = HSlider.new()
-    music_slider.position = Vector2(120, 50)
-    music_slider.size = Vector2(240, 29)
-    music_slider.min_value = 0.0
-    music_slider.max_value = 1.0
-    music_slider.step = 0.05
-    music_slider.value = audio_engine.music_level
-    music_slider.value_changed.connect(func(value: float): audio_engine.set_music_level(value))
-    mixer_panel.add_child(music_slider)
-    _label(mixer_panel, "Logging SFX", Vector2(18, 102), 15, Color.WHITE)
-    effects_slider = HSlider.new()
-    effects_slider.position = Vector2(120, 102)
-    effects_slider.size = Vector2(240, 29)
-    effects_slider.min_value = 0.0
-    effects_slider.max_value = 1.0
-    effects_slider.step = 0.05
-    effects_slider.value = audio_engine.sfx_level
-    effects_slider.value_changed.connect(func(value: float): audio_engine.set_sfx_level(value))
-    mixer_panel.add_child(effects_slider)
-    var test_button := Button.new()
-    test_button.text = "TEST CHOP SOUND"
-    test_button.position = Vector2(16, 155)
-    test_button.size = Vector2(345, 49)
-    test_button.pressed.connect(func(): audio_engine.play_fx("axe-chop"))
-    mixer_panel.add_child(test_button)
+    # Single responsive HUD and ledger shared by desktop, mobile and controllers.
+    ui = preload("res://scripts/frontier_mobile_ui.gd").new()
+    ui.name = "MobileHUD"
+    add_child(ui)
+    ui.build(self)
+    hud = ui.hud
+    instructions = ui.instructions
+    message = ui.message
+    navigation_label = ui.navigation_label
+    joystick = ui.joystick
+    action_button = ui.action_button
+    sound_button = ui.sound_button
+    mixer_button = ui.mixer_button
+    fullscreen_button = ui.fullscreen_button
+    mixer_panel = ui.mixer_panel
+    music_slider = ui.music_slider
+    effects_slider = ui.effects_slider
+    top_panel = ui.top_panel
 
 func _toggle_audio() -> void:
     audio_engine.toggle_enabled()
@@ -371,20 +328,8 @@ func _toggle_fullscreen() -> void:
 
 func _on_viewport_resized() -> void:
     var visible_size := get_viewport_rect().size
-    if top_panel != null:
-        top_panel.size.x = visible_size.x
-    if joystick != null:
-        joystick.position = Vector2(24, visible_size.y - 204)
-    if action_button != null:
-        action_button.position = Vector2(visible_size.x - 218, visible_size.y - 144)
-    if fullscreen_button != null:
-        fullscreen_button.position.x = visible_size.x - 132
-    if sound_button != null:
-        sound_button.position.x = visible_size.x - 330
-    if mixer_button != null:
-        mixer_button.position.x = visible_size.x - 217
-    if mixer_panel != null:
-        mixer_panel.position.x = visible_size.x - 404
+    if ui != null:
+        ui.resize_layout(visible_size)
     if terrain != null:
         terrain.call("update_view", player_pos, visible_size)
     _update_visible_chunks(true)
@@ -395,6 +340,21 @@ func _input(event: InputEvent) -> void:
         return
     if event is InputEventKey and event.pressed and not event.echo:
         audio_engine.begin_audio()
+        if event.keycode == KEY_ESCAPE and ui != null and ui.is_open:
+            ui.close_menu()
+            get_viewport().set_input_as_handled()
+        elif event.keycode == KEY_M and ui != null:
+            ui.open_menu("MARKET")
+        elif event.keycode == KEY_I and ui != null:
+            ui.open_menu("GEAR")
+        elif event.keycode == KEY_P and ui != null:
+            ui.open_menu("CAMP")
+        elif event.keycode == KEY_F5:
+            progression.save_game(self)
+            _say("Game saved.")
+        elif event.keycode == KEY_F9:
+            if progression.load_game(self):
+                _say("Last saved world restored.")
     elif event is InputEventScreenTouch and event.pressed:
         audio_engine.begin_audio()
     elif event is InputEventMouseButton and event.pressed:
@@ -403,9 +363,22 @@ func _input(event: InputEvent) -> void:
         audio_engine.begin_audio()
         if event.button_index == JOY_BUTTON_START:
             _toggle_fullscreen()
+        elif event.button_index == JOY_BUTTON_B and ui != null and ui.is_open:
+            ui.close_menu()
+        elif event.button_index == JOY_BUTTON_Y and ui != null:
+            ui.open_menu("MARKET")
+        elif event.button_index == JOY_BUTTON_X and ui != null:
+            ui.open_menu("GEAR")
 
 func _process(delta: float) -> void:
+    if ui != null and ui.is_open:
+        previous_action_down = Input.is_key_pressed(KEY_E) or Input.is_key_pressed(KEY_SPACE) or Input.is_joy_button_pressed(0, JOY_BUTTON_A)
+        _update_hud()
+        return
     world_time += delta
+    progression.tick(delta, self)
+    if world_tint != null:
+        world_tint.color = progression.ambient_color()
     _move_player(delta)
     _update_camera(delta)
     _animate_trees(delta)
@@ -425,7 +398,7 @@ func _process(delta: float) -> void:
     if logger != null:
         logger.z_index = int(player_pos.y / 10.0)
     var action_down := Input.is_key_pressed(KEY_E) or Input.is_key_pressed(KEY_SPACE) or Input.is_joy_button_pressed(0, JOY_BUTTON_A)
-    if action_down and not previous_action_down:
+    if action_down and not previous_action_down and (ui == null or not ui.is_open):
         _interact()
     previous_action_down = action_down
     _update_hud()
