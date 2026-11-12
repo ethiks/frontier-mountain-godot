@@ -190,22 +190,37 @@ func _panel(parent: Node, label_name: String, background: Color) -> Panel:
     return panel
 
 func _button(parent: Node, caption: String, dark: bool) -> Button:
-    var btn := Button.new()
-    btn.text = caption
-    btn.focus_mode = Control.FOCUS_ALL
-    btn.add_theme_font_size_override("font_size", 15)
-    var fill: Color = COLORS.pine if dark else COLORS.parchment2
-    var ink: Color = COLORS.cream if dark else COLORS.ink
-    btn.add_theme_color_override("font_color", ink)
-    btn.add_theme_color_override("font_hover_color", COLORS.cream if dark else COLORS.ink)
-    btn.add_theme_color_override("font_focus_color", COLORS.cream if dark else COLORS.ink)
-    btn.add_theme_stylebox_override("normal", _style(fill, COLORS.edge, 2))
-    btn.add_theme_stylebox_override("hover", _style(COLORS.pine_hover if dark else COLORS.gold, COLORS.gold, 3))
-    btn.add_theme_stylebox_override("pressed", _style(COLORS.frame, COLORS.gold, 3))
-    btn.add_theme_stylebox_override("focus", _style(Color.TRANSPARENT, COLORS.gold, 4))
-    btn.add_theme_stylebox_override("disabled", _style(Color("#706753"), Color("#806b50"), 2))
-    parent.add_child(btn)
-    return btn
+    var button := Button.new()
+    button.text = caption
+    button.focus_mode = Control.FOCUS_ALL
+    button.add_theme_font_size_override("font_size", 15)
+    button.add_theme_color_override("font_color", COLORS.cream if dark else COLORS.ink)
+    button.add_theme_color_override("font_hover_color", COLORS.cream if dark else COLORS.ink)
+    button.add_theme_color_override("font_focus_color", COLORS.cream if dark else COLORS.ink)
+    var base_fill := Color.TRANSPARENT if dark else COLORS.parchment2
+    button.add_theme_stylebox_override("normal", _style(base_fill, COLORS.edge, 2))
+    button.add_theme_stylebox_override("hover", _style(Color.TRANSPARENT if dark else COLORS.gold, COLORS.gold, 3))
+    button.add_theme_stylebox_override("pressed", _style(Color.TRANSPARENT if dark else COLORS.parchment, COLORS.gold, 3))
+    button.add_theme_stylebox_override("focus", _style(Color.TRANSPARENT, COLORS.gold, 4))
+    button.add_theme_stylebox_override("disabled", _style(Color.TRANSPARENT if dark else Color("#88765d"), COLORS.edge, 2))
+    parent.add_child(button)
+    if dark:
+        # Genuine approved blank sign texture (not a flat coloured Button).
+        # Nine-patch scaling keeps the carved rim intact on wide tabs and
+        # narrow mobile controls; dynamic text stays above the artwork.
+        var wood := NinePatchRect.new()
+        wood.name = "ApprovedCarvedWood"
+        wood.texture = host._region_texture("message")
+        wood.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+        wood.patch_margin_left = 33
+        wood.patch_margin_right = 33
+        wood.patch_margin_top = 18
+        wood.patch_margin_bottom = 18
+        wood.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        wood.show_behind_parent = true
+        button.add_child(wood)
+        wood.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    return button
 
 func resize_shop(available_size: Vector2, mobile: bool) -> void:
     compact = mobile
@@ -276,7 +291,7 @@ func resize_shop(available_size: Vector2, mobile: bool) -> void:
         # enforces a 71px minimum button height in a 160px phone detail card.
         buy_button.add_theme_font_size_override("font_size", 14)
         for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-            var skin := _style(COLORS.pine if state != "disabled" else Color("#665c4b"), COLORS.gold, 2)
+            var skin := _style(Color.TRANSPARENT, COLORS.gold if state != "disabled" else COLORS.edge, 2)
             skin.content_margin_top = 0
             skin.content_margin_bottom = 0
             skin.content_margin_left = 4
@@ -314,6 +329,8 @@ func resize_shop(available_size: Vector2, mobile: bool) -> void:
     footer.size = Vector2(w - 160.0, 40.0)
     footer.add_theme_font_size_override("font_size", 11 if compact else 14)
     _sync_filters()
+    if not filtered_items.is_empty():
+        _build_rows()
     _refresh_detail()
 
 func _icon_texture(identifier: String) -> Texture2D:
@@ -351,8 +368,9 @@ func _sync_filters() -> void:
         var btn: Button = category_buttons[index]
         var key: String = str(CATEGORIES[int(index / 2)][0])
         var on := key == selected_category
-        btn.add_theme_stylebox_override("normal", _style(COLORS.pine if on else COLORS.frame, COLORS.gold if on else COLORS.edge, 3 if on else 2))
+        btn.add_theme_stylebox_override("normal", _style(Color.TRANSPARENT, COLORS.gold if on else COLORS.edge, 3 if on else 2))
         btn.add_theme_color_override("font_color", COLORS.cream if on else Color("#deccac"))
+        btn.modulate = Color.WHITE if on else Color(0.76, 0.78, 0.74)
 
 func _refilter() -> void:
     filtered_items.clear()
@@ -387,24 +405,36 @@ func _build_rows() -> void:
         var item_name: String = str(item["name"])
         var price: int = int(item["price"])
         var owned: bool = game.distributor.is_owned(id)
-        var item_text := ("          " if ITEM_ICONS.has(id) else "  ") + item_name + ("  ·  OWNED" if owned else "  ·  $%d" % price)
-        var btn := _button(item_rows, item_text, false)
+        # The button is the single focus/input surface; labels and approved
+        # thumbnails have separate columns so neither can occlude the other.
+        var btn := _button(item_rows, "", false)
         btn.name = "Item_" + id
-        btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-        btn.add_theme_font_size_override("font_size", 13 if compact else 16)
         btn.custom_minimum_size = Vector2(item_scroll.size.x - 24.0, 48.0 if compact else 58.0)
         btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        var row_width := item_scroll.size.x - 24.0
+        var name_x := 78.0 if ITEM_ICONS.has(id) else 16.0
+        var price_width := 86.0
         if ITEM_ICONS.has(id):
             var icon := TextureRect.new()
             icon.name = "ApprovedThumbnail_" + id
             icon.texture = _icon_texture(id)
             icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-            icon.position = Vector2(3.0, 3.0)
-            icon.size = Vector2(69.0, 49.0 if not compact else 41.0)
+            icon.position = Vector2(4.0, 4.0)
+            icon.size = Vector2(66.0, 48.0 if not compact else 40.0)
             icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
             icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
             icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
             btn.add_child(icon)
+        var item_label := _label(btn, item_name, 14 if compact else 16, COLORS.ink)
+        item_label.name = "ProductName"
+        item_label.clip_text = true
+        item_label.position = Vector2(name_x, 11.0 if compact else 15.0)
+        item_label.size = Vector2(maxf(40.0, row_width - name_x - price_width - 8.0), 28.0)
+        var price_label := _label(btn, "OWNED" if owned else "$%d" % price, 13 if compact else 15, COLORS.ink)
+        price_label.name = "ProductPrice"
+        price_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+        price_label.position = Vector2(row_width - price_width - 6.0, 11.0 if compact else 15.0)
+        price_label.size = Vector2(price_width, 28.0)
         btn.pressed.connect(func(): select_item_by_id(id))
         btn.focus_entered.connect(func(): select_item_by_id(id, false))
         list_buttons.append(btn)
@@ -465,7 +495,7 @@ func _refresh_detail() -> void:
     var owned: bool = game.distributor.is_owned(id)
     var funds: int = int(game.get("cash"))
     item_title.text = name.to_upper()
-    item_description.text = str(item["detail"])
+    item_description.text = str(item["detail"]) + "\n\n" + str(item["category"]).to_upper() + "  ·  FRONTIER SUPPLY"
     detail_icon.texture = _icon_texture(id)
     detail_icon.visible = detail_icon.texture != null
     no_icon.visible = not detail_icon.visible
