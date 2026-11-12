@@ -197,7 +197,7 @@ func _button(parent: Node, caption: String, dark: bool) -> Button:
     button.add_theme_color_override("font_color", COLORS.cream if dark else COLORS.ink)
     button.add_theme_color_override("font_hover_color", COLORS.cream if dark else COLORS.ink)
     button.add_theme_color_override("font_focus_color", COLORS.cream if dark else COLORS.ink)
-    var base_fill := Color.TRANSPARENT if dark else COLORS.parchment2
+    var base_fill: Color = Color.TRANSPARENT if dark else COLORS.parchment2
     button.add_theme_stylebox_override("normal", _style(base_fill, COLORS.edge, 2))
     button.add_theme_stylebox_override("hover", _style(Color.TRANSPARENT if dark else COLORS.gold, COLORS.gold, 3))
     button.add_theme_stylebox_override("pressed", _style(Color.TRANSPARENT if dark else COLORS.parchment, COLORS.gold, 3))
