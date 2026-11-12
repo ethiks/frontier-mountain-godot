@@ -38,6 +38,7 @@ var menu_close: Button
 var current_menu := ""
 var is_open := false
 var compact := false
+var ui_scale := 1.0
 
 func build(p_game: Node) -> void:
     game = p_game
@@ -184,13 +185,30 @@ func _build_menu() -> void:
     menu_rows.add_theme_constant_override("separation", 8)
     menu_scroll.add_child(menu_rows)
 
+func _calculate_ui_scale(logical: Vector2, actual_height: float) -> float:
+    # Godot Web canvas_items may render its 1280x720 reference viewport
+    # into a 844x390 browser canvas. Without scaling, 47px buttons become
+    # approximately 25 physical pixels high and are hard to tap.
+    if actual_height < 505.0 and logical.y > 590.0:
+        return 1.52
+    if actual_height < 620.0 and logical.y > 590.0:
+        return 1.17
+    return 1.0
+
 func resize_layout(size: Vector2) -> void:
     if root == null:
         return
-    var w := maxf(600.0, size.x)
-    var h := maxf(345.0, size.y)
+    var physical_h := size.y
+    if OS.has_feature("web"):
+        var browser_h: Variant = JavaScriptBridge.eval("Number(window.innerHeight)")
+        if typeof(browser_h) == TYPE_INT or typeof(browser_h) == TYPE_FLOAT:
+            physical_h = float(browser_h)
+    ui_scale = _calculate_ui_scale(size, physical_h)
+    var w := maxf(600.0, size.x / ui_scale)
+    var h := maxf(345.0, size.y / ui_scale)
     compact = w < 1030.0 or h < 520.0
     root.position = Vector2.ZERO
+    root.scale = Vector2.ONE * ui_scale
     root.size = Vector2(w, h)
     top_panel.position = Vector2.ZERO
     top_panel.size = Vector2(w, 98.0 if compact else 104.0)
