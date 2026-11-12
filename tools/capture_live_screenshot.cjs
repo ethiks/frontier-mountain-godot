@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { chromium } = require("playwright-core");
-const URL = "https://frontier-mountain-godot.onrender.com/?review=distributor-overhaul-final-20261111";
+const URL = "https://frontier-mountain-godot.onrender.com/?review=variation-a-995798dc-20261112";
 const OUTPUT = path.resolve("docs/screenshots");
 
 async function hold(page, key, ms) {
@@ -51,7 +51,11 @@ async function start(page) {
     await page.locator("canvas").click({ position: { x: 720, y: 270 } });
     await page.waitForTimeout(180);
     await screenshot(page, "21-distributor-shop.png");
-    await page.locator("canvas").click({ position: { x: 876, y: 270 } });
+    await screenshot(page, "24-variation-a-shop.png");
+    await page.keyboard.press("ArrowDown");
+    await page.waitForTimeout(180);
+    await screenshot(page, "25-variation-a-controller-highlight.png");
+    await page.locator("canvas").click({ position: { x: 1095, y: 120 } });
     await page.waitForTimeout(180);
     await screenshot(page, "22-distributor-supplies.png");
     await page.keyboard.press("Escape");
@@ -113,6 +117,12 @@ async function start(page) {
     await mobile.keyboard.press("m");
     await mobile.waitForTimeout(180);
     await screenshot(mobile, "18-market-mobile-menu.png");
+    await mobile.keyboard.press("e");
+    await mobile.keyboard.press("e");
+    await mobile.waitForTimeout(270);
+    await screenshot(mobile, "26-variation-a-mobile-shop.png");
+    await mobile.keyboard.press("ArrowDown");
+    await screenshot(mobile, "27-variation-a-mobile-focus.png");
     await mobile.keyboard.press("Escape");
     await mobile.keyboard.press("p");
     await mobile.waitForTimeout(180);
