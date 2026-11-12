@@ -579,8 +579,8 @@ func _clear_selected() -> void:
 
 func _sell_selected() -> void:
     var receipt: Dictionary = game.distributor.sell_selected(game, sale_quantities)
-    if int(receipt["count"]) > 0:
-        game.audio_engine.play_fx("log-drop",0.7)
+    # The distributor itself plays the dedicated sale-coins jingle.
+    # Reserve the old log-drop sample for physically unloading timber.
     sale_quantities = [0,0,0,0,0,0,0]
     refresh_menu()
 
