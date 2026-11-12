@@ -34,6 +34,16 @@ func _run() -> void:
     if not _check(shop.selected_item_id == "handcart" and shop.detail_icon.texture != null and shop.buy_button.text.begins_with("BUY"), "approved Log Cart is initial selected item with illustrated detail and price"):
         quit(1)
         return
+    var axe_row: Button = shop.item_rows.get_node("Item_sharp")
+    var axe_icon: TextureRect = axe_row.get_node("ApprovedThumbnail_sharp")
+    var axe_name: Label = axe_row.get_node("ProductName")
+    var axe_price: Label = axe_row.get_node("ProductPrice")
+    if not _check(axe_icon.position.x + axe_icon.size.x <= axe_name.position.x and axe_name.position.x + axe_name.size.x <= axe_price.position.x, "Approved item icon, product name and price occupy separate columns"):
+        quit(1)
+        return
+    if not _check(shop.buy_button.get_node_or_null("ApprovedCarvedWood") != null and shop.nav_bar.get_child(0).get_node_or_null("ApprovedCarvedWood") != null, "Variation A purchase and tabs use approved carved-wood textures instead of flat buttons"):
+        quit(1)
+        return
     if not _check(shop.category_panel.visible and not shop.category_mobile.visible, "desktop shows Variation A's category rail"):
         quit(1)
         return
@@ -42,6 +52,15 @@ func _run() -> void:
     if not _check(shop.active_index == selected_before + 1 and shop.list_buttons[shop.active_index].has_focus(), "D-pad changes item selection and visible gamepad focus"):
         quit(1)
         return
+    # End-to-end synthetic Kishi button event routed through the game node.
+    var kishi := InputEventJoypadButton.new()
+    kishi.button_index = JOY_BUTTON_DPAD_DOWN
+    kishi.pressed = true
+    game.call("_input", kishi)
+    if not _check(shop.active_index == selected_before + 2, "Game forwards Kishi D-pad events into shop selection rather than moving lumberjack"):
+        quit(1)
+        return
+    shop.handle_button(JOY_BUTTON_DPAD_UP)
     shop.handle_button(JOY_BUTTON_DPAD_UP)
     if not _check(shop.active_index == selected_before, "D-pad can navigate back up"):
         quit(1)
