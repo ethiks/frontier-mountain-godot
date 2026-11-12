@@ -10,6 +10,64 @@ const CREAM := Color("#f2e6c6")
 const MUTED := Color("#c7cbb3")
 const DANGER := Color("#a26052")
 
+# Crops from the user-approved Frontier Mountain carved-wood UI artboard.
+const UI_REGIONS := {
+    "banner": Rect2(0,0,1167,141),
+    "ledger": Rect2(0,150,608,451),
+    "action": Rect2(620,151,444,97),
+    "camp": Rect2(620,255,186,79),
+    "market": Rect2(814,255,196,78),
+    "gear": Rect2(1016,255,174,78),
+    "message": Rect2(622,348,528,91),
+    "green": Rect2(622,448,185,80),
+    "sound": Rect2(810,448,100,80),
+    "mix": Rect2(914,448,93,80),
+    "save": Rect2(1010,448,98,80),
+    "full": Rect2(1110,448,93,80),
+    "joystick": Rect2(0,610,162,167)
+}
+const APPROVED_UI := "res://assets/ui/approved_ui.webp"
+var ui_atlas: Texture2D
+var banner_art: TextureRect
+var message_art: TextureRect
+var ledger_art: NinePatchRect
+var market_view := "sell"
+var shop_filter := "all"
+var sale_quantities := [0,0,0,0,0,0,0]
+
+func _region_texture(name: String) -> AtlasTexture:
+    var crop := AtlasTexture.new()
+    crop.atlas = ui_atlas
+    crop.region = UI_REGIONS[name]
+    crop.filter_clip = true
+    return crop
+
+func _image(parent: Node, asset_name: String) -> TextureRect:
+    var img := TextureRect.new()
+    img.name = "Approved_" + asset_name
+    img.texture = _region_texture(asset_name)
+    img.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    img.stretch_mode = TextureRect.STRETCH_SCALE
+    img.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    parent.add_child(img)
+    return img
+
+func _decorate_button(button: Button, asset_name: String, fixed_label: bool = false) -> void:
+    # Texture stays behind the native button's input/focus and dynamic text.
+    var invisible := StyleBoxEmpty.new()
+    for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+        button.add_theme_stylebox_override(state, invisible)
+    var art := _image(button, asset_name)
+    art.show_behind_parent = true
+    art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    if fixed_label:
+        button.text = ""
+        button.tooltip_text = asset_name.capitalize()
+    else:
+        button.add_theme_color_override("font_color", Color("#342315"))
+        button.add_theme_color_override("font_hover_color", Color("#342315"))
+
 var game
 var root: Control
 var top_panel: ColorRect
@@ -43,6 +101,7 @@ var ui_scale := 1.0
 
 func build(p_game: Node) -> void:
     game = p_game
+    ui_atlas = load(APPROVED_UI) as Texture2D
     root = Control.new()
     root.name = "UnifiedHUD"
     root.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -52,6 +111,7 @@ func build(p_game: Node) -> void:
     top_panel.color = Color(0.07, 0.15, 0.12, 0.92)
     top_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(top_panel)
+    banner_art = _image(top_panel, "banner")
     hud = _label(root, "FRONTIER MOUNTAIN", 22, GOLD)
     instructions = _label(root, "DAY 1 07:36  |  $0", 17, CREAM)
     navigation_label = _label(root, "LOGS 0/4  |  CAMP AXE", 15, MUTED)
@@ -60,6 +120,7 @@ func build(p_game: Node) -> void:
     message_backdrop.color = Color(0.08, 0.15, 0.12, 0.83)
     message_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(message_backdrop)
+    message_art = _image(root, "message")
     message = _label(root, "Chop · Buck · Haul · Sell", 15, GOLD)
     message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     # Retain the approved virtual joystick and 8-direction logger.
@@ -86,6 +147,15 @@ func build(p_game: Node) -> void:
     save_button.pressed.connect(_save_now)
     fullscreen_button = _button(root, "FULL", 13)
     fullscreen_button.pressed.connect(func(): game.call("_toggle_fullscreen"))
+    _decorate_button(action_button, "action")
+    _decorate_button(camp_button, "camp", true)
+    _decorate_button(market_button, "market", true)
+    _decorate_button(gear_button, "gear", true)
+    _decorate_button(sound_button, "sound", true)
+    _decorate_button(mixer_button, "mix", true)
+    _decorate_button(save_button, "save", true)
+    _decorate_button(fullscreen_button, "full", true)
+
 
     _build_mixer()
     _build_menu()
@@ -174,9 +244,19 @@ func _build_menu() -> void:
     root.add_child(shade)
     menu_panel = Panel.new()
     menu_panel.name = "FieldLedger"
-    menu_panel.add_theme_stylebox_override("panel", _style(PANEL, TIMBER, 3))
+    menu_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
     menu_panel.visible = false
     root.add_child(menu_panel)
+    ledger_art = NinePatchRect.new()
+    ledger_art.name = "ApprovedLedgerFrame"
+    ledger_art.texture = _region_texture("ledger")
+    ledger_art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    ledger_art.patch_margin_left = 75
+    ledger_art.patch_margin_right = 63
+    ledger_art.patch_margin_top = 105
+    ledger_art.patch_margin_bottom = 68
+    ledger_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    menu_panel.add_child(ledger_art)
     menu_title = _label(menu_panel, "CAMP", 22, GOLD)
     menu_title.position = Vector2(21, 14)
     menu_close = _button(menu_panel, "CLOSE", 14)
@@ -218,16 +298,22 @@ func resize_layout(size: Vector2) -> void:
     root.size = Vector2(w, h)
     top_panel.position = Vector2.ZERO
     top_panel.size = Vector2(w, 98.0 if compact else 104.0)
+    banner_art.position = Vector2.ZERO
+    banner_art.size = Vector2(maxf(510.0, w - 325.0), top_panel.size.y)
+
     hud.position = Vector2(16, 10)
     hud.add_theme_font_size_override("font_size", 18 if compact else 23)
-    instructions.position = Vector2(16, 39)
+    instructions.position = Vector2(400 if compact else 424, 24)
     instructions.add_theme_font_size_override("font_size", 14 if compact else 16)
-    navigation_label.position = Vector2(16, 62)
+    navigation_label.position = Vector2(400 if compact else 424, 54)
     navigation_label.add_theme_font_size_override("font_size", 12 if compact else 14)
     message.position = Vector2(16, 111 if compact else 117)
     message.size = Vector2(minf(w - 43.0, 525.0), 47)
     message_backdrop.position = message.position - Vector2(8, 4)
     message_backdrop.size = Vector2(message.size.x + 16, 51)
+    message_art.position = message_backdrop.position - Vector2(4, 6)
+    message_art.size = Vector2(message_backdrop.size.x + 8, message_backdrop.size.y + 9)
+
     message.add_theme_font_size_override("font_size", 13 if compact else 15)
     var tool_w := 68.0 if compact else 80.0
     var gap := 5.0
@@ -255,23 +341,28 @@ func resize_layout(size: Vector2) -> void:
     var panel_w := minf(610.0, w - 46.0)
     var panel_h := minf(552.0, h - 42.0)
     menu_panel.size = Vector2(panel_w, panel_h)
+    ledger_art.position = Vector2.ZERO
+    ledger_art.size = menu_panel.size
+
     menu_panel.position = Vector2((w - panel_w) * 0.5, (h - panel_h) * 0.5)
-    menu_close.position = Vector2(panel_w - 113.0, 12)
+    menu_title.position = Vector2(70.0, 77.0)
+    menu_title.add_theme_color_override("font_color", Color("#432e1c"))
+    menu_close.position = Vector2(panel_w - 135.0, 69.0)
     menu_close.size = Vector2(96, 42)
-    menu_scroll.position = Vector2(16, 65)
-    menu_scroll.size = Vector2(panel_w - 32.0, panel_h - 84.0)
-    menu_rows.custom_minimum_size.x = panel_w - 51.0
+    menu_scroll.position = Vector2(57, 127)
+    menu_scroll.size = Vector2(panel_w - 115.0, panel_h - 167.0)
+    menu_rows.custom_minimum_size.x = panel_w - 139.0
 
 func update_header() -> void:
     if game == null:
         return
     var progress = game.progression
     var money: int = int(game.get("cash"))
-    hud.text = "FRONTIER MOUNTAIN"
+    hud.text = ""  # The approved banner already has the logo lettering.
     instructions.text = "DAY %d  %s  •  $%d  •  %s" % [progress.day, progress.clock_string(), money, progress.axe_name()]
     navigation_label.text = "LOGS %d/%d  •  TOOL %d%%  •  HOME %d tiles" % [game.get("carried").size(), progress.capacity(), int(progress.condition / progress.AXE_CONDITION[progress.axe_level] * 100.0), int(game.get("player_pos").distance_to(game.YARD_POSITION) / 32.0)]
     message.text = game.get("message_text")
-    sound_button.text = "SOUND" if game.audio_engine.enabled else "MUTED"
+    sound_button.modulate = Color.WHITE if game.audio_engine.enabled else Color(0.75, 0.50, 0.45, 0.85)
     if is_open and current_menu != "":
         # Text refresh happens after transactions; don't rebuild scroll every frame.
         pass
