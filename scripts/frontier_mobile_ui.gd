@@ -94,6 +94,9 @@ var menu_title: Label
 var menu_scroll: ScrollContainer
 var menu_rows: VBoxContainer
 var menu_close: Button
+var market_tabs: HBoxContainer
+var market_tab_buttons: Dictionary = {}
+var action_hint: Label
 var current_menu := ""
 var is_open := false
 var compact := false
@@ -147,7 +150,9 @@ func build(p_game: Node) -> void:
     save_button.pressed.connect(_save_now)
     fullscreen_button = _button(root, "FULL", 13)
     fullscreen_button.pressed.connect(func(): game.call("_toggle_fullscreen"))
-    _decorate_button(action_button, "action")
+    _decorate_button(action_button, "action", true)
+    action_hint = _label(root, "CHOP", 16, GOLD)
+    action_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _decorate_button(camp_button, "camp", true)
     _decorate_button(market_button, "market", true)
     _decorate_button(gear_button, "gear", true)
@@ -236,9 +241,11 @@ func _build_mixer() -> void:
     close.pressed.connect(func(): mixer_panel.visible = false)
 
 func _build_menu() -> void:
+    # One art frame, one fixed header, one page switcher and one scrolling
+    # content surface. No UI text or controls are placed over the antler roof.
     shade = ColorRect.new()
     shade.name = "MenuBackdrop"
-    shade.color = Color(0.01, 0.04, 0.03, 0.76)
+    shade.color = Color(0.005, 0.015, 0.012, 0.82)
     shade.mouse_filter = Control.MOUSE_FILTER_STOP
     shade.visible = false
     root.add_child(shade)
@@ -251,16 +258,37 @@ func _build_menu() -> void:
     ledger_art.name = "ApprovedLedgerFrame"
     ledger_art.texture = _region_texture("ledger")
     ledger_art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-    ledger_art.patch_margin_left = 75
-    ledger_art.patch_margin_right = 63
-    ledger_art.patch_margin_top = 105
-    ledger_art.patch_margin_bottom = 68
+    ledger_art.patch_margin_left = 74
+    ledger_art.patch_margin_right = 65
+    ledger_art.patch_margin_top = 114
+    ledger_art.patch_margin_bottom = 61
     ledger_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
     menu_panel.add_child(ledger_art)
-    menu_title = _label(menu_panel, "CAMP", 22, GOLD)
-    menu_title.position = Vector2(21, 14)
-    menu_close = _button(menu_panel, "CLOSE", 14)
+    menu_title = _label(menu_panel, "FIELD LEDGER", 19, Color("#3b2c21"))
+    menu_title.add_theme_color_override("font_shadow_color", Color.TRANSPARENT)
+    menu_title.add_theme_constant_override("shadow_offset_x", 0)
+    menu_title.add_theme_constant_override("shadow_offset_y", 0)
+    menu_close = _button(menu_panel, "CLOSE", 15)
+    menu_close.name = "LedgerClose"
+    menu_close.add_theme_stylebox_override("normal", _style(Color("#9a7049"), Color("#513720"), 2))
+    menu_close.add_theme_stylebox_override("hover", _style(Color("#c79b61"), Color("#513720"), 2))
+    menu_close.add_theme_color_override("font_color", Color("#fff0c7"))
     menu_close.pressed.connect(close_menu)
+
+    market_tabs = HBoxContainer.new()
+    market_tabs.name = "MarketPageTabs"
+    market_tabs.add_theme_constant_override("separation", 7)
+    market_tabs.visible = false
+    menu_panel.add_child(market_tabs)
+    for entry in [["sell", "SELL TIMBER"], ["contracts", "CONTRACTS"], ["shop", "SHOP"], ["supplies", "SUPPLIES"]]:
+        var key: String = str(entry[0])
+        var button := _button(market_tabs, str(entry[1]), 13)
+        button.name = "Tab_" + key
+        button.custom_minimum_size.y = 44
+        button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        button.pressed.connect(func(): _choose_market_page(key))
+        market_tab_buttons[key] = button
+
     menu_scroll = ScrollContainer.new()
     menu_scroll.name = "LedgerScroll"
     menu_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -268,7 +296,7 @@ func _build_menu() -> void:
     menu_panel.add_child(menu_scroll)
     menu_rows = VBoxContainer.new()
     menu_rows.name = "LedgerRows"
-    menu_rows.add_theme_constant_override("separation", 8)
+    menu_rows.add_theme_constant_override("separation", 5)
     menu_scroll.add_child(menu_rows)
 
 func _calculate_ui_scale(logical: Vector2, actual_height: float) -> float:
