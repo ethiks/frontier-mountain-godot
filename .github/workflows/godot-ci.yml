@@ -1,0 +1,28 @@
+name: Validate Variation A Godot build
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - "tests/**"
+      - "project.godot"
+      - "assets/ui/**"
+      - ".github/workflows/godot-ci.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  godot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run all Godot smoke suites and export for Web
+        shell: bash
+        run: bash scripts/build_web.sh
+      - name: Upload verified Web export
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontier-mountain-variation-a-web
+          path: web/
+          if-no-files-found: error
