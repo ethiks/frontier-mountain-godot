@@ -32,6 +32,9 @@ func _run() -> void:
     if not _check(ui.camp_button != null and ui.market_button != null and ui.gear_button != null and ui.save_button != null, "Camp, market, gear and save accessible from single HUD"):
         quit(1)
         return
+    if not _check(ui.call("_calculate_ui_scale", Vector2(1280.0, 720.0), 390.0) >= 1.5, "Phone landscape dynamically enlarges UI and tap targets"):
+        quit(1)
+        return
     ui.resize_layout(Vector2(844.0, 390.0))
     if not _check(ui.action_button.position.x + ui.action_button.size.x <= 844.0 and ui.action_button.position.y + ui.action_button.size.y <= 390.0, "Landscape phone action button stays within 844x390 viewport"):
         quit(1)
