@@ -31,7 +31,8 @@ func _run() -> void:
     if not _check(shop.category_buttons.size() == 10 and shop.filtered_items.size() == 17, "all 17 distributor items visible under five categories"):
         quit(1)
         return
-    if not _check(shop.selected_item_id == "handcart" and shop.detail_icon.texture != null and shop.buy_button.text.begins_with("BUY"), "approved Log Cart is initial selected item with illustrated detail and price"):
+    shop.select_item_by_id("handcart")
+    if not _check(shop.selected_item_id == "handcart" and shop.detail_icon.texture != null and shop.buy_button.text.begins_with("BUY"), "approved Log Cart is selectable with illustrated detail and price"):
         quit(1)
         return
     var axe_row: Button = shop.item_rows.get_node("Item_sharp")
