@@ -1,4 +1,4 @@
-// Frontier Mountain phases 2-4: true Godot WebGL captures of unified mobile HUD, market, gear, saves and game loop.
+// Frontier Mountain phases 2-4: final phone-scale touch and desktop menus from deployed Godot browser.
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
@@ -92,9 +92,18 @@ async function start(page) {
     await mobile.locator("canvas").waitFor({ state: "visible", timeout: 120000 });
     await mobile.waitForTimeout(10500);
     await screenshot(mobile, "11-landscape-mobile.png");
-    await mobile.locator("canvas").click({ position: { x: 678, y: 257 } });
-    await mobile.waitForTimeout(260);
+    // Real touch gesture on the enlarged mobile MARKET tab.
+    await mobile.locator("canvas").tap({ position: { x: 686, y: 282 } });
+    await mobile.waitForTimeout(300);
     await screenshot(mobile, "17-market-landscape-mobile.png");
+    // Also verify keyboard/controller-equivalent menu path on a mobile viewport.
+    await mobile.keyboard.press("m");
+    await mobile.waitForTimeout(180);
+    await screenshot(mobile, "18-market-mobile-menu.png");
+    await mobile.keyboard.press("Escape");
+    await mobile.keyboard.press("p");
+    await mobile.waitForTimeout(180);
+    await screenshot(mobile, "19-camp-mobile-menu.png");
     await mobile.close();
   } finally {
     await browser.close();
