@@ -16,6 +16,7 @@ var top_panel: ColorRect
 var hud: Label
 var instructions: Label
 var message: Label
+var message_backdrop: ColorRect
 var navigation_label: Label
 var joystick: Control
 var action_button: Button
@@ -54,6 +55,11 @@ func build(p_game: Node) -> void:
     hud = _label(root, "FRONTIER MOUNTAIN", 22, GOLD)
     instructions = _label(root, "DAY 1 07:36  |  $0", 17, CREAM)
     navigation_label = _label(root, "LOGS 0/4  |  CAMP AXE", 15, MUTED)
+    message_backdrop = ColorRect.new()
+    message_backdrop.name = "FieldHintBackdrop"
+    message_backdrop.color = Color(0.08, 0.15, 0.12, 0.83)
+    message_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    root.add_child(message_backdrop)
     message = _label(root, "Chop · Buck · Haul · Sell", 15, GOLD)
     message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     # Retain the approved virtual joystick and 8-direction logger.
@@ -218,8 +224,10 @@ func resize_layout(size: Vector2) -> void:
     instructions.add_theme_font_size_override("font_size", 14 if compact else 16)
     navigation_label.position = Vector2(16, 62)
     navigation_label.add_theme_font_size_override("font_size", 12 if compact else 14)
-    message.position = Vector2(16, 104 if compact else 112)
-    message.size = Vector2(minf(w - 32.0, 540.0), 53)
+    message.position = Vector2(16, 111 if compact else 117)
+    message.size = Vector2(minf(w - 43.0, 525.0), 47)
+    message_backdrop.position = message.position - Vector2(8, 4)
+    message_backdrop.size = Vector2(message.size.x + 16, 51)
     message.add_theme_font_size_override("font_size", 13 if compact else 15)
     var tool_w := 68.0 if compact else 80.0
     var gap := 5.0
