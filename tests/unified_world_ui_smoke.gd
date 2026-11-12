@@ -60,8 +60,23 @@ func _run() -> void:
         quit(1)
         return
     var frame_id: int = ledger.get_instance_id()
+    # Exercise actual desktop and touch button signals; cycling categories
+    # programmatically cannot catch stale callbacks inherited from Shop.
+    for mobile_index in [0, 1]:
+        ledger.category_buttons[2 + mobile_index].pressed.emit()
+        if not _check(ledger.selected_category == "raw" and ledger.filtered_items.size() == 4, "RAW LOGS click filters four raw products"):
+            quit(1)
+            return
+        ledger.category_buttons[4 + mobile_index].pressed.emit()
+        if not _check(ledger.selected_category == "processed" and ledger.filtered_items.size() == 3, "MILLED click filters three processed products"):
+            quit(1)
+            return
     ui._choose_market_page("contracts")
     if not _check(ledger.get_instance_id() == frame_id and ledger.page == "contracts" and ledger.filtered_items.size() >= 4, "Contracts changes content without rebuilding shared header/frame"):
+        quit(1)
+        return
+    ledger.category_buttons[4].pressed.emit()
+    if not _check(ledger.filtered_items.is_empty() and ledger.buy_button.disabled and not ledger.qty_minus.visible and not ledger.qty_plus.visible and not ledger.qty_max.visible, "empty ACTIVE contracts cannot expose stale sale controls"):
         quit(1)
         return
     ui._choose_market_page("shop")
@@ -110,6 +125,33 @@ func _run() -> void:
         quit(1)
         return
 
+    for mobile_index in [0, 1]:
+        ledger.category_buttons[4 + mobile_index].pressed.emit()
+        if not _check(ledger.selected_category == "active" and ledger.filtered_items.size() == 1, "ACTIVE click shows accepted contract"):
+            quit(1)
+            return
+        ledger.category_buttons[2 + mobile_index].pressed.emit()
+        if not _check(ledger.selected_category == "offers" and ledger.filtered_items.size() == 3, "OFFERS click shows remaining buyer offers"):
+            quit(1)
+            return
+
+    ui._choose_market_page("supplies")
+    for mobile_index in [0, 1]:
+        ledger.category_buttons[2 + mobile_index].pressed.emit()
+        if not _check(ledger.selected_category == "goods" and ledger.filtered_items.size() == game.distributor.SUPPLY_SHOP.size(), "SUPPLIES click shows consumable goods"):
+            quit(1)
+            return
+        ledger.category_buttons[4 + mobile_index].pressed.emit()
+        if not _check(ledger.selected_category == "services" and ledger.filtered_items.size() == 2, "SERVICES click shows available repairs"):
+            quit(1)
+            return
+
+    ui._choose_market_page("shop")
+    ledger.category_buttons[2].pressed.emit()
+    if not _check(ledger.selected_category == "tools" and not ledger.filtered_items.is_empty(), "Shop restores TOOLS filter after changing tabs"):
+        quit(1)
+        return
+
     ui.resize_layout(Vector2(844.0, 390.0))
     if not _check(ledger.compact and ledger.category_mobile.visible and ledger.item_panel.size.x > 210.0 and ledger.detail_panel.size.x > 200.0, "landscape phone uses touch-friendly split inventory/details"):
         quit(1)
@@ -122,4 +164,6 @@ func _run() -> void:
         quit(1)
         return
     print("PASS: UNIFIED UI world overlay, four-tab market, touch/controller transactions and message expiry complete")
+    game.queue_free()
+    await process_frame
     quit(0)
