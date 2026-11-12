@@ -24,9 +24,22 @@ func _run() -> void:
     var stall: Sprite2D = game.get_node_or_null("Prop_MarketDistributor")
     if not _check(stall != null and stall.texture != null and stall.texture.get_width() * stall.scale.x >= 400.0,"Approved market stall scales clerk with logger"):
         quit(1);return
+    var coins = game.get("trade_sfx")
+    if not _check(coins != null and coins.get("purchase_sound") != null and coins.get("sale_sound") != null, "Separate purchase and sale coin generators installed"):
+        quit(1);return
+    var buy_clip: AudioStreamWAV = coins.get("purchase_sound")
+    var sell_clip: AudioStreamWAV = coins.get("sale_sound")
+    if not _check(buy_clip.data.size() > 12000 and sell_clip.data.size() > 12000 and buy_clip.data != sell_clip.data, "Purchase and payout coin effects are distinct playable PCM samples"):
+        quit(1);return
     if not _check(game.get_node_or_null("Prop_trader-open") == null,"Miniature old trader sprite removed"):
         quit(1);return
     if not _check(ui.get("ui_atlas") != null and ui.menu_panel.get_node_or_null("ApprovedLedgerFrame") != null,"Approved UI atlas and parchment menu imported"):
+        quit(1);return
+    if not _check(ui.market_tabs.get_parent() == ui.menu_panel and ui.market_tab_buttons.size() == 4, "Market navigation tabs fixed outside scroll region"):
+        quit(1);return
+    if not _check(ui.action_button.text == "" and ui.action_hint != null and ui.action_hint.text != "", "ACTION art lettering remains undoubled; contextual prompt separate"):
+        quit(1);return
+    if not _check(ui.market_tabs.get_node_or_null("Approved_green") == null, "Menu tabs do not reuse cut-off baked-label artwork"):
         quit(1);return
     if not _check(market.SHOP.size() == 17 and market.SUPPLY_SHOP.size() == 3,"Full 17-item distributor catalog and three supply types listed"):
         quit(1);return
