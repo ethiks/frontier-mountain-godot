@@ -1,9 +1,9 @@
-// Cache-busted final deployment capture: check kiosk relocation and unified parchment UI on the actual live build.
+// Variation A final polish (carved wood, discrete columns, controller focus): real Godot live browser captures.
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { chromium } = require("playwright-core");
-const URL = "https://frontier-mountain-godot.onrender.com/?review=variation-a-995798dc-20261112";
+const URL = "https://frontier-mountain-godot.onrender.com/?review=variation-a-polished-d674c983";
 const OUTPUT = path.resolve("docs/screenshots");
 
 async function hold(page, key, ms) {
@@ -52,6 +52,7 @@ async function start(page) {
     await page.waitForTimeout(180);
     await screenshot(page, "21-distributor-shop.png");
     await screenshot(page, "24-variation-a-shop.png");
+    await screenshot(page, "28-variation-a-polished-shop.png");
     await page.keyboard.press("ArrowDown");
     await page.waitForTimeout(180);
     await screenshot(page, "25-variation-a-controller-highlight.png");
@@ -121,6 +122,7 @@ async function start(page) {
     await mobile.keyboard.press("e");
     await mobile.waitForTimeout(270);
     await screenshot(mobile, "26-variation-a-mobile-shop.png");
+    await screenshot(mobile, "29-variation-a-polished-mobile.png");
     await mobile.keyboard.press("ArrowDown");
     await screenshot(mobile, "27-variation-a-mobile-focus.png");
     await mobile.keyboard.press("Escape");
