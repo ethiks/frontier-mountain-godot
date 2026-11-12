@@ -1,4 +1,4 @@
-// Frontier Mountain Phase 1: real browser captures of the Godot forest and camera.
+// Frontier Mountain collision-on-felling and pixel-art paths / log landing review (actual deployed WebGL canvas).
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
