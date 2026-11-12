@@ -150,9 +150,14 @@ func build(p_game: Node) -> void:
     save_button.pressed.connect(_save_now)
     fullscreen_button = _button(root, "FULL", 13)
     fullscreen_button.pressed.connect(func(): game.call("_toggle_fullscreen"))
-    _decorate_button(action_button, "action", true)
-    action_hint = _label(root, "CHOP", 16, GOLD)
-    action_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    # Use the approved *unlettered* carved-wood sign as the primary action
+    # texture. The original action crop already contains CHOP lettering and
+    # cannot display PICK UP/BUCK/UNLOAD without doubled text.
+    _decorate_button(action_button, "message")
+    action_button.add_theme_color_override("font_color", CREAM)
+    action_button.add_theme_color_override("font_hover_color", Color.WHITE)
+    action_hint = _label(root, "", 14, GOLD)
+    action_hint.visible = false
     _decorate_button(camp_button, "camp", true)
     _decorate_button(market_button, "market", true)
     _decorate_button(gear_button, "gear", true)
@@ -356,9 +361,7 @@ func resize_layout(size: Vector2) -> void:
     var action_w := 154.0 if compact else 184.0
     action_button.size = Vector2(action_w, 77.0 if compact else 90.0)
     action_button.position = Vector2(w - action_w - 18.0, h - action_button.size.y - 19.0)
-    action_hint.position = Vector2(action_button.position.x - 11.0, action_button.position.y - 31.0)
-    action_hint.size = Vector2(action_w + 22.0, 24.0)
-    action_hint.add_theme_font_size_override("font_size", 14 if compact else 16)
+    action_hint.visible = false
     var menu_w := 91.0 if compact else 105.0
     var menu_y := action_button.position.y - 58.0
     for i in range(3):
