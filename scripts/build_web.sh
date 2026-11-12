@@ -19,4 +19,6 @@ mkdir -p /tmp/frontier-smoke-distributor && rm -rf /tmp/frontier-smoke-distribut
 XDG_DATA_HOME=/tmp/frontier-smoke-distributor /tmp/godot-dist/Godot_v${VERSION}-stable_linux.x86_64 --headless --path . --script res://tests/distributor_smoke.gd
 mkdir -p /tmp/frontier-smoke-shop-a && rm -rf /tmp/frontier-smoke-shop-a/*
 XDG_DATA_HOME=/tmp/frontier-smoke-shop-a /tmp/godot-dist/Godot_v${VERSION}-stable_linux.x86_64 --headless --path . --script res://tests/shop_variation_a_smoke.gd
+mkdir -p /tmp/frontier-smoke-unified && rm -rf /tmp/frontier-smoke-unified/*
+XDG_DATA_HOME=/tmp/frontier-smoke-unified /tmp/godot-dist/Godot_v${VERSION}-stable_linux.x86_64 --headless --path . --script res://tests/unified_world_ui_smoke.gd
 /tmp/godot-dist/Godot_v${VERSION}-stable_linux.x86_64 --headless --path . --export-release 'Web' web/index.html
