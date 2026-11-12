@@ -114,9 +114,11 @@ func _run() -> void:
 		quit(1)
 		return
 	# The player must be able to walk across the former trunk position during the falling animation.
-	game.set("player_pos", tree["pos"] - Vector2(90, 0))
-	game.call("_move_with_collisions", Vector2(180, 0))
-	if not _check(game.get("player_pos").x > tree["pos"].x + 75.0, "Walk freely through former trunk before bucking"):
+	# Avoid a separate, still-standing generated tree 85 px to the west.
+	# The 88-px traversal fully crosses this tree's old 62-px hitbox.
+	game.set("player_pos", tree["pos"] - Vector2(44, 0))
+	game.call("_move_with_collisions", Vector2(88, 0))
+	if not _check(game.get("player_pos").x > tree["pos"].x + 40.0, "Walk freely through former trunk before bucking"):
 		quit(1)
 		return
 	game.set("player_pos", tree["pos"] + Vector2(15, 8))
