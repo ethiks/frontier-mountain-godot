@@ -139,7 +139,7 @@ func generate_offers(day: int) -> void:
         if index == 2 and is_owned("kiln"):
             grade = "dried"
             product_idx = 5
-        var unit := 46 if grade == "boards" else (76 if grade == "dried" else [13,17,19,27][species])
+        var unit: int = 46 if grade == "boards" else (76 if grade == "dried" else [13,17,19,27][species])
         var offer: Dictionary = {
             "id": "D%d-%d-%d" % [day,index,contract_sequence],
             "species": species,
