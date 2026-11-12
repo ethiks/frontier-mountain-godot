@@ -375,7 +375,7 @@ func resize_layout(size: Vector2) -> void:
     # Preserve the approved frame's aspect ratio rather than stretching it
     # to the whole screen. The ledger stays inside safe landscape margins.
     var panel_h := minf(574.0, h - 20.0)
-    var panel_w := minf(750.0, panel_h * 1.39, w - 40.0)
+    var panel_w := minf(minf(750.0, panel_h * 1.39), w - 40.0)
     menu_panel.size = Vector2(panel_w, panel_h)
     menu_panel.position = Vector2((w - panel_w) * 0.5, (h - panel_h) * 0.5)
     ledger_art.position = Vector2.ZERO
