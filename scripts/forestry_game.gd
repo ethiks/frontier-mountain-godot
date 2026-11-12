@@ -7,8 +7,8 @@ const CHUNK_SIZE := 384.0
 const HOMESTEAD_ORIGIN := Vector2(860.0, 760.0)
 const CABIN_ENTRY := HOMESTEAD_ORIGIN + Vector2(707.0, 352.0)
 const SHED_ENTRY := HOMESTEAD_ORIGIN + Vector2(962.0, 392.0)
-const DISTRIBUTOR_POSITION := Vector2(1900.0, 1364.0)
-const DISTRIBUTOR_COUNTER := Vector2(1900.0, 1366.0)
+const DISTRIBUTOR_POSITION := HOMESTEAD_ORIGIN + Vector2(968.0, 365.0)
+const DISTRIBUTOR_COUNTER := DISTRIBUTOR_POSITION
 const DISTRIBUTOR_WIDTH := 408.0
 const FRAME_W := 84
 const FRAME_H := 92
@@ -73,6 +73,7 @@ var message: Label
 var action_button: Button
 var world_time := 0.0
 var audio_engine
+var trade_sfx
 var progression
 var distributor
 var ui
@@ -101,6 +102,9 @@ func _ready() -> void:
     audio_engine = preload("res://scripts/legacy_audio.gd").new()
     audio_engine.name = "LegacyAudio"
     add_child(audio_engine)
+    trade_sfx = preload("res://scripts/trade_sfx.gd").new()
+    trade_sfx.name = "TradeSFX"
+    add_child(trade_sfx)
     _setup_background()
     _setup_trees()
     _setup_player()
@@ -121,10 +125,9 @@ func _setup_background() -> void:
     terrain.name = "ForestTerrain"
     terrain.z_index = -100
     add_child(terrain)
-    # Preserve the existing independently sized cabin and single tool shed.
+    # The distributor now occupies the former toolshed site: one coherent
+    # homestead trading station, without a second competing shed prop.
     _place_prop("cabin-day", HOMESTEAD_ORIGIN + Vector2(650.0, 326.0), 340.0, 1)
-    _place_prop("shed", HOMESTEAD_ORIGIN + Vector2(968.0, 365.0), 206.0, 1)
-    # This trader sprite belongs to the original, user-approved core pack.
     _place_distributor()
 
 func _place_distributor() -> void:
@@ -475,8 +478,6 @@ func _collides_at(candidate: Vector2) -> bool:
     var local_pos := candidate - HOMESTEAD_ORIGIN
     if CABIN_BLOCKER.grow(PLAYER_COLLISION_RADIUS).has_point(local_pos):
         return true
-    if SHED_BLOCKER.grow(PLAYER_COLLISION_RADIUS).has_point(local_pos):
-        return true
     # The timber-market kiosk counter has a solid footprint, but the front
     # interaction space remains clear for the lumberjack.
     var kiosk_base := Rect2(DISTRIBUTOR_POSITION + Vector2(-188, -70), Vector2(376, 63))
@@ -563,10 +564,6 @@ func _interact() -> void:
     if player_pos.distance_to(CABIN_ENTRY) < 78.0:
         ui.open_menu("CAMP")
         _say("Cabin: save, load or rest until tomorrow.")
-        return
-    if player_pos.distance_to(SHED_ENTRY) < 78.0:
-        ui.open_menu("GEAR")
-        _say("Tool shed: upgrade, repair and equip your tools.")
         return
     if player_pos.distance_to(YARD_POSITION) < 115.0:
         ui.open_menu("MARKET")
@@ -661,8 +658,6 @@ func _update_hud() -> void:
         action_button.text = "UNLOAD"
     elif player_pos.distance_to(CABIN_ENTRY) < 78.0:
         action_button.text = "CAMP"
-    elif player_pos.distance_to(SHED_ENTRY) < 78.0:
-        action_button.text = "SHOP"
     elif player_pos.distance_to(DISTRIBUTOR_COUNTER + Vector2(0.0, 45.0)) < 140.0:
         action_button.text = "TRADE"
     elif player_pos.distance_to(YARD_POSITION) < 115.0:
