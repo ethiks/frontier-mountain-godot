@@ -29,9 +29,9 @@ const UI_REGIONS := {
 const APPROVED_UI := "res://assets/ui/approved_ui.webp"
 const WORLD_UI_ATLAS := "res://assets/ui/world_ui_unified_atlas.png"
 const WORLD_UI_REGIONS := {
-    "bar_short": Rect2(0,0,268,59),
-    "bar_medium": Rect2(290,0,442,66),
-    "bar_long": Rect2(750,0,797,86),
+    "bar_short": Rect2(0,0,278,62),
+    "bar_medium": Rect2(290,0,452,66),
+    "bar_long": Rect2(750,0,810,76),
     "utility_sound": Rect2(0,112,102,89),
     "utility_mix": Rect2(120,112,103,89),
     "utility_save": Rect2(240,112,102,89),
