@@ -9,6 +9,80 @@ const SUPPLY_CATEGORIES := [["all", "ALL"], ["goods", "SUPPLIES"], ["services", 
 var page := "shop"
 var selected_quantities: Dictionary = {}
 var market_assets: Texture2D
+var qty_minus: Button
+var qty_plus: Button
+var qty_max: Button
+var qty_display: Label
+
+func setup(p_host, p_game) -> void:
+    super.setup(p_host,p_game)
+    qty_minus = _button(detail_panel, "−", true)
+    qty_minus.name = "SellQuantityMinus"
+    qty_minus.pressed.connect(func(): adjust_quantity(-1))
+    qty_plus = _button(detail_panel, "+", true)
+    qty_plus.name = "SellQuantityPlus"
+    qty_plus.pressed.connect(func(): adjust_quantity(1))
+    qty_max = _button(detail_panel, "MAX", true)
+    qty_max.name = "SellQuantityMax"
+    qty_max.pressed.connect(_choose_max)
+    qty_display = _label(detail_panel, "0", 17, COLORS.ink)
+    qty_display.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    resize_shop(Vector2(1060.0,640.0),false)
+
+func resize_shop(available_size: Vector2, mobile: bool) -> void:
+    super.resize_shop(available_size,mobile)
+    if qty_minus == null:
+        return
+    var panel_width: float = detail_panel.size.x
+    var y: float = detail_panel.size.y - (92.0 if compact else 107.0)
+    var total_width: float = panel_width - 28.0
+    var gap := 4.0
+    qty_minus.position = Vector2(12.0,y)
+    qty_minus.size = Vector2(40.0,34.0)
+    qty_display.position = Vector2(57.0,y + 4.0)
+    qty_display.size = Vector2(maxf(33.0,total_width - 144.0),28.0)
+    qty_plus.position = Vector2(panel_width - 91.0,y)
+    qty_plus.size = Vector2(37.0,34.0)
+    qty_max.position = Vector2(panel_width - 51.0,y)
+    qty_max.size = Vector2(40.0,34.0)
+    for button in [qty_minus,qty_plus,qty_max]:
+        button.add_theme_font_size_override("font_size",14)
+    _update_quantity_controls()
+
+func _choose_max() -> void:
+    if page != "sell":
+        return
+    var entry: Dictionary = _selected_item()
+    if entry.is_empty():
+        return
+    var key: String = str(entry["id"])
+    selected_quantities[key] = game.distributor.available(int(entry["index"]))
+    pending_id = ""
+    _refresh_detail()
+
+func _update_quantity_controls() -> void:
+    if qty_minus == null:
+        return
+    var showing: bool = page == "sell"
+    for control in [qty_minus,qty_plus,qty_max,qty_display]:
+        control.visible = showing
+    item_price.visible = not showing
+    if not showing:
+        return
+    var entry: Dictionary = _selected_item()
+    if entry.is_empty():
+        qty_display.text = "0"
+        qty_minus.disabled = true
+        qty_plus.disabled = true
+        qty_max.disabled = true
+        return
+    var count: int = int(selected_quantities.get(str(entry["id"]),0))
+    var stock: int = game.distributor.available(int(entry["index"]))
+    qty_display.text = "%d / %d" % [count,stock]
+    qty_minus.disabled = count <= 0
+    qty_plus.disabled = count >= stock
+    qty_max.disabled = count >= stock
+
 
 func _page_categories() -> Array:
     match page:
@@ -160,6 +234,7 @@ func _refresh_detail() -> void:
         return
     if page == "shop":
         super._refresh_detail()
+        _update_quantity_controls()
         return
     var entry: Dictionary = _selected_item()
     if entry.is_empty():
@@ -229,6 +304,7 @@ func _refresh_detail() -> void:
     item_state.text = state_text
     buy_button.text = ("CONFIRM  " + label_text) if pending_id == identifier else label_text
     buy_button.disabled = not eligible
+    _update_quantity_controls()
 
 func _request_purchase() -> void:
     if page == "shop":
