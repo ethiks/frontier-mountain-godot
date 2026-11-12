@@ -94,18 +94,37 @@ func _run() -> void:
 	game.call("_update_visible_chunks", true)
 	game.call("_update_canopy_occlusion")
 	var tree: Dictionary = game.get("trees")[0]
+	if not _check(game.call("_collides_at", tree["pos"]), "Standing tree has a solid trunk"):
+		quit(1)
+		return
 	game.set("player_pos", tree["pos"] + Vector2(15, 8))
 	for i in range(int(tree["hp"])):
 		game.call("_interact")
 	if not _check(int(tree["state"]) == 1, "Chopping triggers falling"):
 		quit(1)
 		return
+	if not _check(not game.call("_collides_at", tree["pos"]), "Final chop immediately removes trunk hitbox before bucking"):
+		quit(1)
+		return
+	# The player must be able to walk across the former trunk position during the falling animation.
+	game.set("player_pos", tree["pos"] - Vector2(90, 0))
+	game.call("_move_with_collisions", Vector2(180, 0))
+	if not _check(game.get("player_pos").x > tree["pos"].x + 75.0, "Walk freely through former trunk before bucking"):
+		quit(1)
+		return
+	game.set("player_pos", tree["pos"] + Vector2(15, 8))
 	game.call("_animate_trees", 1.0)
 	if not _check(int(tree["state"]) == 2, "Falling animation completes"):
 		quit(1)
 		return
+	if not _check(not game.call("_collides_at", tree["pos"]), "Unbucked fallen trunk remains non-solid"):
+		quit(1)
+		return
 	game.call("_interact")
 	if not _check(int(tree["state"]) == 3 and game.get("ground_logs").size() >= 2, "Bucking creates approved logs"):
+		quit(1)
+		return
+	if not _check(not game.call("_collides_at", tree["pos"]), "Bucked site remains free of stale collision"):
 		quit(1)
 		return
 	game.call("_interact")
