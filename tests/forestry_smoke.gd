@@ -163,7 +163,18 @@ func _run() -> void:
 		return
 	game.set("player_pos", Vector2(1662, 1324))
 	game.call("_interact")
-	if not _check(game.get("carried").is_empty() and game.get("cash") > 0, "Yard unload pays species log value"):
+	var distributor = game.get("distributor")
+	if not _check(game.get("carried").is_empty() and distributor.total_raw() == 1, "Yard unload stores harvested wood for distributor sale"):
+		quit(1)
+		return
+	var selected := [0,0,0,0,0,0,0]
+	selected[int(game.get("ground_logs")[0]["type"])] = 1
+	# Only stocked inventory can be sold; adjust to actual delivered species.
+	selected = [0,0,0,0,0,0,0]
+	for species in range(4):
+		if distributor.available(species) > 0:
+			selected[species] = 1
+	if not _check(distributor.sell_selected(game,selected)["income"] > 0 and game.get("cash") > 0, "Distributor sells only selected stocked lumber"):
 		quit(1)
 		return
 	# A headless render may have no drawable framebuffer; publish only a real,
