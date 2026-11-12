@@ -38,6 +38,7 @@ func _run() -> void:
     var axe_icon: TextureRect = axe_row.get_node("ApprovedThumbnail_sharp")
     var axe_name: Label = axe_row.get_node("ProductName")
     var axe_price: Label = axe_row.get_node("ProductPrice")
+    print("ROW_DEBUG icon=", axe_icon.position, "/", axe_icon.size, " name=", axe_name.position, "/", axe_name.size, " price=", axe_price.position, "/", axe_price.size, " row=", axe_row.size)
     if not _check(axe_icon.position.x + axe_icon.size.x <= axe_name.position.x and axe_name.position.x + axe_name.size.x <= axe_price.position.x, "Approved item icon, product name and price occupy separate columns"):
         quit(1)
         return
