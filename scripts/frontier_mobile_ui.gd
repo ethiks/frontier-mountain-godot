@@ -480,7 +480,7 @@ func _sell_page() -> void:
 
 func _sell_stock_row(index: int) -> void:
     var dealer = game.distributor
-    var stock := dealer.available(index)
+    var stock: int = dealer.available(index)
     var selected := mini(stock, int(sale_quantities[index]))
     sale_quantities[index] = selected
     var row := HBoxContainer.new()
@@ -579,7 +579,7 @@ func _shop_page() -> void:
             continue
         var identifier := str(entry["id"])
         var price := int(entry["price"])
-        var owned := dealer.is_owned(identifier)
+        var owned: bool = dealer.is_owned(identifier)
         _paragraph("%s · $%d" % [entry["name"],price],true)
         _paragraph(str(entry["detail"]))
         _menu_button("OWNED" if owned else "BUY  $%d" % price,func(): _purchase_shop(identifier),not owned and int(game.get("cash")) >= price)
