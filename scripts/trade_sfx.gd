@@ -38,7 +38,7 @@ func _make_coin_sound(selling: bool) -> AudioStreamWAV:
                 var age := t - onset
                 if age >= 0.0:
                     var env := exp(-age * 15.0) * minf(1.0, age * 160.0)
-                    var freq := [1047.0, 1319.0, 1568.0][step]
+                    var freq: float = [1047.0, 1319.0, 1568.0][step]
                     v += env * (sin(TAU * freq * age) + 0.22 * sin(TAU * freq * 2.03 * age))
         else:
             # Lower two-clink purchase / coins leaving the purse.
@@ -47,7 +47,7 @@ func _make_coin_sound(selling: bool) -> AudioStreamWAV:
                 var age := t - onset
                 if age >= 0.0:
                     var env := exp(-age * 19.0) * minf(1.0, age * 140.0)
-                    var freq := [880.0, 659.25][step]
+                    var freq: float = [880.0, 659.25][step]
                     v += env * (sin(TAU * freq * age) + 0.27 * sin(TAU * freq * 1.71 * age))
         var pcm := int(round(clampf(v * 0.37, -1.0, 1.0) * 32767.0))
         bytes.encode_s16(i * 2, pcm)
