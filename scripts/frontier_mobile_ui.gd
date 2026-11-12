@@ -391,53 +391,250 @@ func refresh_menu() -> void:
     for existing in menu_rows.get_children():
         menu_rows.remove_child(existing)
         existing.queue_free()
-    menu_title.text = "CAMP & SAVES" if current_menu == "CAMP" else ("TIMBER MARKET" if current_menu == "MARKET" else "EQUIPMENT & HAULING")
+    menu_title.text = "CAMP LEDGER" if current_menu == "CAMP" else ("MARKET DISTRIBUTOR" if current_menu == "MARKET" else "GEAR & TOOLS")
     var progress = game.progression
+    var dealer = game.distributor
     if current_menu == "CAMP":
-        _paragraph("DAY %d  •  %s  •  fifteen-minute day cycle" % [progress.day, progress.clock_string()], true)
-        _paragraph("Progress saves automatically after logging, purchases, trading and every 35 seconds.")
-        _menu_button("SAVE GAME", _save_now)
+        _paragraph("DAY %d   %s   ·   FUNDS $%d" % [progress.day,progress.clock_string(),int(game.get("cash"))], true)
+        _paragraph("Your forest, fallen timber, yard inventory and distributor orders are stored in your save.")
+        _menu_button("SAVE CURRENT GAME", _save_now)
         _menu_button("LOAD LAST SAVE", _load_now)
-        _menu_button("REST UNTIL MORNING  ·  at cabin door", _rest_now)
-        _paragraph("Sleeping advances the day and refreshes timber prices and the daily contract.")
-    elif current_menu == "MARKET":
-        _paragraph("TODAY'S TIMBER PRICES", true)
-        for species in range(4):
-            _paragraph("%s logs     $%d each" % [progress.SPECIES[species], progress.market_price(species)])
-        var contract_status := "PAID" if progress.contract_claimed else "%d/%d delivered" % [progress.contract_progress, progress.contract_goal]
-        _paragraph("DAILY CONTRACT", true)
-        _paragraph("Deliver %d %s logs  •  bonus $%d\n%s" % [progress.contract_goal, progress.SPECIES[progress.contract_species], progress.contract_reward, contract_status])
-        var distance: float = game.get("player_pos").distance_to(game.YARD_POSITION)
-        var enabled: bool = distance < 110.0 and game.get("carried").size() > 0
-        _menu_button("SELL CARRIED LOGS  ·  at loading zone", _sell_now, enabled)
-        _paragraph("Prices change each morning. Contract bonuses pay once when the required species are delivered.")
-        _paragraph("Lifetime: %d logs sold  •  $%d earned" % [progress.total_delivered, progress.total_earned])
-    else:
+        _menu_button("SLEEP UNTIL MORNING (CABIN DOOR)", _rest_now)
+        _paragraph("Sleeping refreshes the distributor's orders and market prices. Automatic saving remains enabled.")
+    elif current_menu == "GEAR":
         _paragraph("CURRENT EQUIPMENT", true)
-        _paragraph("%s  •  Power %d  •  Condition %d/%d" % [progress.axe_name(), progress.chop_power(), int(progress.condition), int(progress.AXE_CONDITION[progress.axe_level])])
-        _paragraph("Hauling: %s  •  %d logs" % [progress.cart_name(), progress.capacity()])
-        if progress.axe_level < progress.AXES.size() - 1:
-            _menu_button("UPGRADE TO %s    $%d" % [progress.AXES[progress.axe_level + 1], progress.AXE_COSTS[progress.axe_level + 1]], _upgrade_axe)
-        if progress.cart_level < progress.CARTS.size() - 1:
-            _menu_button("UPGRADE TO %s    $%d" % [progress.CARTS[progress.cart_level + 1], progress.CART_COSTS[progress.cart_level + 1]], _upgrade_cart)
+        _paragraph("%s  ·  POWER %d  ·  DURABILITY %d/%d" % [progress.axe_name(),progress.chop_power() + (2 if dealer.is_owned("chain") and progress.axe_level == 3 else 0),int(progress.condition),int(progress.AXE_CONDITION[progress.axe_level])])
+        _paragraph("HAULING: %s  ·  %d logs" % [progress.cart_name(),progress.capacity()])
+        _paragraph("CHAINSAW FUEL: %d/%d  ·  REPAIR PARTS: %d" % [int(progress.fuel),int(dealer.fuel_max()),dealer.repair_parts])
+        _menu_button("VISIT DISTRIBUTOR SHOP", _open_shop)
         _menu_button("REPAIR CUTTING TOOL", _repair)
-        if progress.axe_level == 3:
-            _paragraph("Chainsaw fuel: %d/%d" % [int(progress.fuel), int(progress.FUEL_CAPACITY)])
-            _menu_button("REFUEL CHAINSAW    $%d" % progress.FUEL_REFILL_COST, _fuel)
-        _paragraph("Tool and cart upgrades affect harvesting and load capacity. New visual sprites remain pending separate approval.")
+        _menu_button("FIELD REPAIR WITH PARTS", _field_repair, dealer.is_owned("shed") and dealer.repair_parts > 0)
+        _paragraph("Equipment purchases are available through the distributor. Cart and chainsaw visuals remain pending their separately approved art.")
+    else:
+        _paragraph("ELIAS  ·  FRONTIER SUPPLY CO.  ·  $%d  ·  REP %d  ·  XP %d" % [int(game.get("cash")),dealer.reputation,dealer.experience], true)
+        _paragraph(dealer.last_event)
+        _market_navigation()
+        match market_view:
+            "contracts":
+                _contracts_page()
+            "shop":
+                _shop_page()
+            "supplies":
+                _supplies_page()
+            _:
+                _sell_page()
 
 func _paragraph(text_value: String, accent: bool = false) -> void:
-    var row := _label(menu_rows, text_value, 18 if accent else 15, GOLD if accent else CREAM)
+    var row := _label(menu_rows, text_value, 17 if accent else 15, Color("#583b25") if accent else Color("#302519"))
     row.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    row.custom_minimum_size.y = 34.0 if accent else (56.0 if "\n" in text_value else 30.0)
+    row.custom_minimum_size.y = 37.0 if accent else (58.0 if "\n" in text_value else 32.0)
 
 func _menu_button(title: String, callback: Callable, enabled: bool = true) -> void:
-    var b := _button(menu_rows, title, 15, true)
-    b.custom_minimum_size.y = 47
+    var b := _button(menu_rows, title, 15, false)
+    _decorate_button(b, "green")
+    b.add_theme_color_override("font_color", CREAM)
+    b.add_theme_color_override("font_hover_color", Color.WHITE)
+    b.custom_minimum_size.y = 45
     b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     b.disabled = not enabled
     b.pressed.connect(callback)
+
+func _market_navigation() -> void:
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 5)
+    menu_rows.add_child(row)
+    for entry in [["sell","SELL"],["contracts","ORDERS"],["shop","SHOP"],["supplies","SUPPLY"]]:
+        var key: String = str(entry[0])
+        var b := _button(row, str(entry[1]), 13, false)
+        _decorate_button(b, "green")
+        b.add_theme_color_override("font_color", CREAM)
+        b.custom_minimum_size = Vector2(104,46)
+        b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        b.modulate = Color.WHITE if key == market_view else Color(0.76,0.76,0.69,1.0)
+        b.pressed.connect(func(): _choose_market_page(key))
+
+func _choose_market_page(name: String) -> void:
+    market_view = name
+    refresh_menu()
+
+func _sell_page() -> void:
+    var dealer = game.distributor
+    _paragraph("TODAY'S TIMBER PRICES  ·  STORED AT LANDING", true)
+    _paragraph("Raw logs remain in the depot until you choose which species and quantity to sell.")
+    for i in range(7):
+        _sell_stock_row(i)
+    var selected_count := 0
+    var subtotal := 0
+    for i in range(7):
+        selected_count += int(sale_quantities[i])
+        subtotal += int(sale_quantities[i]) * dealer.price(i, game.progression)
+    _paragraph("SELECTED %d UNITS    ESTIMATED RECEIPT $%d" % [selected_count,subtotal], true)
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 5)
+    menu_rows.add_child(row)
+    _row_button(row, "ALL", _select_all)
+    _row_button(row, "CLEAR", _clear_selected)
+    _row_button(row, "SELL $%d" % subtotal, _sell_selected, subtotal > 0)
+    _paragraph("Yard occupancy: %d / %d raw logs  ·  Lifetime %d units sold" % [dealer.total_raw(),dealer.stock_capacity(),dealer.lifetime_sales])
+
+func _sell_stock_row(index: int) -> void:
+    var dealer = game.distributor
+    var stock := dealer.available(index)
+    var selected := mini(stock, int(sale_quantities[index]))
+    sale_quantities[index] = selected
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 4)
+    menu_rows.add_child(row)
+    var text_label := _label(row, "%s    x%d  ·  $%d" % [dealer.GOODS[index],stock,dealer.price(index,game.progression)], 14, Color("#392a1e"))
+    text_label.custom_minimum_size = Vector2(267,39)
+    text_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var minus := _button(row, "-", 19, false)
+    minus.custom_minimum_size = Vector2(43,38)
+    minus.disabled = selected <= 0
+    minus.pressed.connect(func(): _change_selected(index,-1))
+    var count := _label(row, str(selected), 17, Color("#573f20"))
+    count.custom_minimum_size = Vector2(31,34)
+    var plus := _button(row, "+", 18, false)
+    plus.custom_minimum_size = Vector2(43,38)
+    plus.disabled = selected >= stock
+    plus.pressed.connect(func(): _change_selected(index,1))
+
+func _row_button(parent: HBoxContainer, label_text: String, fn: Callable, enabled: bool = true) -> void:
+    var b := _button(parent,label_text,15,false)
+    _decorate_button(b,"green")
+    b.add_theme_color_override("font_color", CREAM)
+    b.custom_minimum_size.y = 45
+    b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    b.disabled = not enabled
+    b.pressed.connect(fn)
+
+func _change_selected(idx: int, direction: int) -> void:
+    sale_quantities[idx] = clampi(int(sale_quantities[idx]) + direction,0,game.distributor.available(idx))
+    refresh_menu()
+
+func _select_all() -> void:
+    for i in range(7):
+        sale_quantities[i] = game.distributor.available(i)
+    refresh_menu()
+
+func _clear_selected() -> void:
+    sale_quantities = [0,0,0,0,0,0,0]
+    refresh_menu()
+
+func _sell_selected() -> void:
+    var receipt: Dictionary = game.distributor.sell_selected(game, sale_quantities)
+    if int(receipt["count"]) > 0:
+        game.audio_engine.play_fx("log-drop",0.7)
+    sale_quantities = [0,0,0,0,0,0,0]
+    refresh_menu()
+
+func _contracts_page() -> void:
+    var dealer = game.distributor
+    _paragraph("BUYER CONTRACTS  ·  %d / 3 ACTIVE" % dealer.active_contracts.size(),true)
+    _paragraph("Accept orders, bring timber to the loading yard and deliver to the distributor before the due date.")
+    if dealer.active_contracts.is_empty():
+        _paragraph("No accepted orders. Choose one from today's offers.")
+    for offer in dealer.active_contracts:
+        var item: Dictionary = offer
+        var idx := int(item["index"])
+        _paragraph("ACTIVE · %d %s  ·  DUE DAY %d" % [int(item["qty"]),dealer.GOODS[idx],int(item["deadline"])],true)
+        _paragraph("AVAILABLE %d/%d   PAYOUT $%d  ·  XP %d" % [dealer.available(idx),int(item["qty"]),int(item["payout"]),int(item["xp"])])
+        var identifier := str(item["id"])
+        _menu_button("DELIVER ORDER  +$%d" % int(item["payout"]),func(): _deliver_order(identifier), dealer.available(idx) >= int(item["qty"]))
+    _paragraph("NEW DISTRIBUTOR OFFERS",true)
+    if dealer.contract_offers.is_empty():
+        _paragraph("All orders have been accepted. New orders arrive tomorrow.")
+    for offer in dealer.contract_offers:
+        var item: Dictionary = offer
+        var identifier := str(item["id"])
+        _paragraph("%d %s · DUE DAY %d · +%d XP" % [int(item["qty"]),dealer.GOODS[int(item["index"])],int(item["deadline"]),int(item["xp"])])
+        _menu_button("ACCEPT ORDER  $%d" % int(item["payout"]),func(): _accept_order(identifier),dealer.active_contracts.size() < 3)
+    _paragraph("Reputation %d  ·  Experience %d" % [dealer.reputation,dealer.experience])
+
+func _accept_order(identifier: String) -> void:
+    game.distributor.accept_contract(game,identifier)
+    refresh_menu()
+
+func _deliver_order(identifier: String) -> void:
+    game.distributor.deliver_contract(game,identifier)
+    refresh_menu()
+
+func _shop_page() -> void:
+    var dealer = game.distributor
+    _paragraph("DISTRIBUTOR EQUIPMENT & UPGRADES",true)
+    _paragraph("All merchandise is listed from the first morning. You can purchase any item you can afford.")
+    var categories := HBoxContainer.new()
+    categories.add_theme_constant_override("separation", 3)
+    menu_rows.add_child(categories)
+    for key in dealer.MARKET_CATEGORIES:
+        var category := str(key)
+        var b := _button(categories,category.capitalize(),12,false)
+        b.custom_minimum_size = Vector2(80,39)
+        b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        b.pressed.connect(func(): _set_shop_filter(category))
+    for item in dealer.SHOP:
+        var entry: Dictionary = item
+        if shop_filter != "all" and str(entry["category"]) != shop_filter:
+            continue
+        var identifier := str(entry["id"])
+        var price := int(entry["price"])
+        var owned := dealer.is_owned(identifier)
+        _paragraph("%s · $%d" % [entry["name"],price],true)
+        _paragraph(str(entry["detail"]))
+        _menu_button("OWNED" if owned else "BUY  $%d" % price,func(): _purchase_shop(identifier),not owned and int(game.get("cash")) >= price)
+    _paragraph("Approved character animations remain unchanged. New cart, chainsaw and facility visuals require separate art approval.")
+
+func _set_shop_filter(filter_name: String) -> void:
+    shop_filter = filter_name
+    refresh_menu()
+
+func _purchase_shop(identifier: String) -> void:
+    game.distributor.buy_shop_item(game,identifier)
+    refresh_menu()
+
+func _supplies_page() -> void:
+    var dealer = game.distributor
+    _paragraph("DISTRIBUTOR SUPPLIES & SERVICES",true)
+    _paragraph("Saplings %d  ·  Repair parts %d  ·  Chainsaw fuel %d/%d" % [dealer.saplings,dealer.repair_parts,int(game.progression.fuel),int(dealer.fuel_max())])
+    for item in dealer.SUPPLY_SHOP:
+        var entry: Dictionary = item
+        var identifier := str(entry["id"])
+        _paragraph(str(entry["name"]) + "    $%d" % int(entry["price"]),true)
+        _paragraph(str(entry["detail"]))
+        _menu_button("PURCHASE SUPPLY",func(): _purchase_supply(identifier),int(game.get("cash")) >= int(entry["price"]))
+    _paragraph("MAINTENANCE & FIELD SERVICES",true)
+    _menu_button("SERVICE CUTTING TOOL",_repair)
+    _menu_button("FIELD REPAIR (1 PART)",_field_repair,dealer.is_owned("shed") and dealer.repair_parts > 0)
+    if dealer.is_owned("sawmill"):
+        _paragraph("Sawmill: %d logs queued  ·  Boards %d  ·  Sawdust %d" % [dealer.milling_queue,dealer.available(4),dealer.available(6)])
+        _menu_button("MILL ONE RAW LOG",func(): _queue_mill(1),dealer.total_raw() > 0)
+        _menu_button("MILL ALL RAW LOGS",func(): _queue_mill(dealer.total_raw()),dealer.total_raw() > 0)
+    if dealer.is_owned("kiln"):
+        _paragraph("Kiln: %d drying  ·  Dried boards %d" % [dealer.drying_queue,dealer.available(5)])
+        _menu_button("DRY ONE BOARD",func(): _queue_kiln(1),dealer.available(4) > 0)
+        _menu_button("DRY ALL BOARDS",func(): _queue_kiln(dealer.available(4)),dealer.available(4) > 0)
+
+func _purchase_supply(identifier: String) -> void:
+    game.distributor.buy_supply(game,identifier)
+    refresh_menu()
+
+func _field_repair() -> void:
+    game.distributor.field_repair(game)
+    refresh_menu()
+
+func _queue_mill(amount: int) -> void:
+    game.distributor.queue_sawmill(game,amount)
+    refresh_menu()
+
+func _queue_kiln(amount: int) -> void:
+    game.distributor.queue_kiln(game,amount)
+    refresh_menu()
+
+func _open_shop() -> void:
+    current_menu = "MARKET"
+    market_view = "shop"
+    refresh_menu()
 
 func _save_now() -> void:
     if game.progression.save_game(game):
