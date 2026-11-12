@@ -113,12 +113,12 @@ func setup(p_host, p_game) -> void:
         var label_name: String = str(entry[1])
         var desktop := _button(desktop_categories, label_name, true)
         desktop.custom_minimum_size.y = 54
-        desktop.pressed.connect(func(): choose_category(key))
+        desktop.pressed.connect(func(): choose_category(str(desktop.get_meta("category_key", key))))
         category_buttons.append(desktop)
         var mobile := _button(category_mobile, label_name, true)
         mobile.add_theme_font_size_override("font_size", 12)
         mobile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-        mobile.pressed.connect(func(): choose_category(key))
+        mobile.pressed.connect(func(): choose_category(str(mobile.get_meta("category_key", key))))
         category_buttons.append(mobile)
 
     item_panel = _panel(frame, "ItemList", COLORS.parchment)

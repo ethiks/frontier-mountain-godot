@@ -132,6 +132,7 @@ func _sync_filters() -> void:
             continue
         var entry: Array = categories[index]
         var key: String = str(entry[0])
+        button.set_meta("category_key", key)
         button.text = str(entry[1])
         var selected: bool = key == selected_category
         button.add_theme_stylebox_override("normal", _style(Color.TRANSPARENT, COLORS.gold if selected else COLORS.edge, 3 if selected else 1))
@@ -258,6 +259,7 @@ func _refresh_detail() -> void:
         no_icon.text = "FRONTIER\nSUPPLY"
         buy_button.disabled = true
         buy_button.text = "UNAVAILABLE"
+        _update_quantity_controls()
         return
     var kind: String = str(entry["kind"])
     var identifier: String = str(entry["id"])
