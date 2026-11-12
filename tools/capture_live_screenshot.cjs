@@ -1,4 +1,4 @@
-// Approved Terrain Pack v1.0 visual verification: real deployed Godot TileMapLayer / biome screenshots.
+// Approved Terrain Pack v1.0 final visual QA: blended forest biomes, contiguous paths, lumberyard and mobile WebGL.
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
